@@ -37,4 +37,8 @@ docker compose up db -d
 
 ## Architecture
 
-The transaction model deliberately separates who paid (`Account.owner`) from who the transaction belongs to (`Allocation`). This lets a transaction paid by Lars be 100% common, private to Lars, or split between people. Rules and confidence are first-class concepts so bank integrations can later feed the same normalized transaction pipeline.
+The transaction model deliberately separates who paid (`Account.owner`) from who the
+transaction belongs to (`Allocation`). This lets a transaction paid by person 1 be 100%
+common, private to person 1, or split between people. Rules and confidence are
+first-class concepts so bank integrations can later feed the same normalized transaction
+pipeline.

@@ -10,11 +10,11 @@ Base.metadata.create_all(engine)
 db = SessionLocal()
 try:
     if db.query(Person).count() == 0:
-        lars = Person(name="Lars")
-        ida = Person(name="Ida")
-        db.add_all([lars, ida])
+        ole = Person(name="Ole")
+        mari = Person(name="Mari")
+        db.add_all([ole, mari])
         db.flush()
-        account = Account(name="Amex Lars", type=AccountType.CREDIT_CARD, owner_id=lars.id)
+        account = Account(name="Amex Ole", type=AccountType.CREDIT_CARD, owner_id=ole.id)
         db.add(account)
         categories = {name: Category(name=name) for name in ["Mat", "Barn", "Bil", "Hus"]}
         db.add_all(categories.values())
