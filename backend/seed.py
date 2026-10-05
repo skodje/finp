@@ -2,7 +2,16 @@ from datetime import date
 from decimal import Decimal
 
 from app.db.session import Base, SessionLocal, engine
-from app.models.entities import Account, AccountType, Allocation, Category, Merchant, Ownership, Person, Transaction
+from app.models.entities import (
+    Account,
+    AccountType,
+    Allocation,
+    Category,
+    Merchant,
+    Ownership,
+    Person,
+    Transaction,
+)
 from app.services.classification import classify
 
 Base.metadata.create_all(engine)
@@ -30,13 +39,25 @@ try:
             db.add(merchant)
             db.flush()
             result = classify(merchant_name)
-            tx = Transaction(account_id=account.id, merchant_id=merchant.id, category_id=categories[category_name].id,
-                             posted_at=date.today(), description=merchant_name, amount=Decimal(amount),
-                             classification_confidence=result.confidence if result else Decimal("0.63"))
+            tx = Transaction(
+                account_id=account.id,
+                merchant_id=merchant.id,
+                category_id=categories[category_name].id,
+                posted_at=date.today(),
+                description=merchant_name,
+                amount=Decimal(amount),
+                classification_confidence=result.confidence if result else Decimal("0.63"),
+            )
             db.add(tx)
             db.flush()
-            db.add(Allocation(transaction_id=tx.id, ownership=Ownership.COMMON if result else Ownership.PRIVATE,
-                              person_id=None, percentage=Decimal("100")))
+            db.add(
+                Allocation(
+                    transaction_id=tx.id,
+                    ownership=Ownership.COMMON if result else Ownership.PRIVATE,
+                    person_id=None,
+                    percentage=Decimal("100"),
+                )
+            )
         db.commit()
         print("Seeded sample household data")
     else:

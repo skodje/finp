@@ -65,7 +65,9 @@ class Transaction(Base):
     account: Mapped[Account] = relationship()
     merchant: Mapped[Merchant | None] = relationship()
     category: Mapped[Category | None] = relationship()
-    allocations: Mapped[list[Allocation]] = relationship(back_populates="transaction", cascade="all, delete-orphan")
+    allocations: Mapped[list[Allocation]] = relationship(
+        back_populates="transaction", cascade="all, delete-orphan"
+    )
 
 
 class Allocation(Base):

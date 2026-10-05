@@ -44,12 +44,16 @@ def health():
 
 @router.get("/transactions", response_model=list[TransactionRead])
 def list_transactions(db: Session = Depends(get_db)):
-    query = select(Transaction).options(
-        joinedload(Transaction.account).joinedload(Account.owner),
-        joinedload(Transaction.merchant),
-        joinedload(Transaction.category),
-        joinedload(Transaction.allocations),
-    ).order_by(Transaction.posted_at.desc())
+    query = (
+        select(Transaction)
+        .options(
+            joinedload(Transaction.account).joinedload(Account.owner),
+            joinedload(Transaction.merchant),
+            joinedload(Transaction.category),
+            joinedload(Transaction.allocations),
+        )
+        .order_by(Transaction.posted_at.desc())
+    )
     return [serialize(tx) for tx in db.scalars(query).unique().all()]
 
 
@@ -62,11 +66,20 @@ def create_transaction(payload: TransactionCreate, db: Session = Depends(get_db)
     db.add(tx)
     db.commit()
     db.refresh(tx)
-    tx = db.scalars(select(Transaction).options(
-        joinedload(Transaction.account).joinedload(Account.owner),
-        joinedload(Transaction.merchant), joinedload(Transaction.category),
-        joinedload(Transaction.allocations),
-    ).where(Transaction.id == tx.id)).unique().one()
+    tx = (
+        db.scalars(
+            select(Transaction)
+            .options(
+                joinedload(Transaction.account).joinedload(Account.owner),
+                joinedload(Transaction.merchant),
+                joinedload(Transaction.category),
+                joinedload(Transaction.allocations),
+            )
+            .where(Transaction.id == tx.id)
+        )
+        .unique()
+        .one()
+    )
     return serialize(tx)
 
 
@@ -76,18 +89,30 @@ def classify(transaction_id: UUID, payload: ClassificationUpdate, db: Session = 
     if not tx:
         raise HTTPException(404, "Transaction not found")
     tx.allocations.clear()
-    tx.allocations.append(Allocation(
-        ownership=Ownership(payload.ownership),
-        person_id=payload.person_id,
-        percentage=Decimal("100"),
-    ))
+    tx.allocations.append(
+        Allocation(
+            ownership=Ownership(payload.ownership),
+            person_id=payload.person_id,
+            percentage=Decimal("100"),
+        )
+    )
     if payload.category_id:
         tx.category_id = payload.category_id
     tx.classification_confidence = Decimal("1.0000")
     db.commit()
     db.refresh(tx)
-    tx = db.scalars(select(Transaction).options(
-        joinedload(Transaction.account).joinedload(Account.owner), joinedload(Transaction.merchant),
-        joinedload(Transaction.category), joinedload(Transaction.allocations),
-    ).where(Transaction.id == tx.id)).unique().one()
+    tx = (
+        db.scalars(
+            select(Transaction)
+            .options(
+                joinedload(Transaction.account).joinedload(Account.owner),
+                joinedload(Transaction.merchant),
+                joinedload(Transaction.category),
+                joinedload(Transaction.allocations),
+            )
+            .where(Transaction.id == tx.id)
+        )
+        .unique()
+        .one()
+    )
     return serialize(tx)
