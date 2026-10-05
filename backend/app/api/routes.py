@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.api.schemas import ClassificationUpdate, TransactionCreate, TransactionRead
 from app.db.session import SessionLocal
-from app.models.entities import Account, Allocation, Category, Merchant, Ownership, Transaction
+from app.models.entities import Account, Allocation, Ownership, Transaction
 
 router = APIRouter(prefix="/api")
 
