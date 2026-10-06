@@ -193,3 +193,16 @@ button {
     margin-bottom: 8px;
   }
 }
+
+.error {
+  padding: 16px;
+  color: #b42318;
+}
+
+.error p {
+  margin: 6px 0;
+}
+
+.error small {
+  opacity: 0.7;
+}

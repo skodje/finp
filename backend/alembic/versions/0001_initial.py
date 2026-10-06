@@ -13,8 +13,6 @@ depends_on = None
 def upgrade():
     ownership = sa.Enum("COMMON", "PRIVATE", name="ownership")
     account_type = sa.Enum("BANK", "CREDIT_CARD", name="accounttype")
-    ownership.create(op.get_bind(), checkfirst=True)
-    account_type.create(op.get_bind(), checkfirst=True)
     uuid = postgresql.UUID(as_uuid=True)
     op.create_table(
         "persons",

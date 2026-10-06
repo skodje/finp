@@ -19,100 +19,165 @@ type Tx = {
 };
 
 function money(v: string | number) {
-  return new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 0 }).format(Number(v)) + ' kr';
+  return (
+    new Intl.NumberFormat('nb-NO', {
+      maximumFractionDigits: 0,
+    }).format(Number(v)) + ' kr'
+  );
 }
 
 function App() {
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     fetch(`${API}/transactions`)
-      .then((r) => (r.ok ? r.json() : []))
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}`);
+        }
+
+        return response.json();
+      })
       .then(setTransactions)
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        console.error('Failed to load transactions:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
+
   const visible = transactions.filter(
     (t) =>
       filter === 'all' ||
       (filter === 'review' && Number(t.confidence ?? 1) < 0.8) ||
       (filter === 'common' && t.ownership === 'common'),
   );
-  const total = transactions.reduce((s, t) => s + Number(t.amount), 0);
+
+  const total = transactions.reduce((sum, transaction) => {
+    return sum + Number(transaction.amount);
+  }, 0);
+
+  const commonTotal = transactions
+    .filter((transaction) => transaction.ownership === 'common')
+    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+
+  const reviewCount = transactions.filter(
+    (transaction) => Number(transaction.confidence ?? 1) < 0.8,
+  ).length;
+
   return (
     <main className="app">
       <div className="shell">
         <header>
           <div className="brand">
             <div className="logo">H</div>
+
             <div>
               <h1>Husøkonomi</h1>
               <p>Familieoversikt · live data</p>
             </div>
           </div>
+
           <div className="actions">
             <button>Importer</button>
             <button className="primary">+ Transaksjon</button>
           </div>
         </header>
+
         <section className="hero">
-          <Stat label="Totalt brukt" value={money(total)} note="Fra API-et" />
+          <Stat
+            label="Totalt brukt"
+            value={money(total)}
+            note="Fra API-et"
+          />
+
           <Stat
             label="Felles"
-            value={money(
-              transactions
-                .filter((t) => t.ownership === 'common')
-                .reduce((s, t) => s + Number(t.amount), 0),
-            )}
+            value={money(commonTotal)}
             note="Klassifisert felles"
           />
+
           <Stat
             label="Trenger svar"
-            value={String(transactions.filter((t) => Number(t.confidence ?? 1) < 0.8).length)}
+            value={String(reviewCount)}
             note="Lav confidence"
           />
-          <Stat label="Transaksjoner" value={String(transactions.length)} note="Importert" />
+
+          <Stat
+            label="Transaksjoner"
+            value={String(transactions.length)}
+            note="Importert"
+          />
         </section>
+
         <section className="card">
           <div className="sectionHead">
             <h2>Transaksjoner</h2>
+
             <div className="tabs">
               {[
                 ['all', 'Alle'],
                 ['review', 'Trenger svar'],
                 ['common', 'Felles'],
-              ].map(([k, l]) => (
+              ].map(([key, label]) => (
                 <button
-                  className={filter === k ? 'active' : ''}
-                  onClick={() => setFilter(k)}
-                  key={k}
+                  className={filter === key ? 'active' : ''}
+                  onClick={() => setFilter(key)}
+                  key={key}
                 >
-                  {l}
+                  {label}
                 </button>
               ))}
             </div>
           </div>
+
           {loading ? (
             <p className="muted">Laster fra backend…</p>
+          ) : error ? (
+            <div className="error">
+              <strong>Kunne ikke hente transaksjoner</strong>
+              <p>{error}</p>
+              <small>
+                API: {API}/transactions
+              </small>
+            </div>
           ) : visible.length === 0 ? (
             <p className="muted">
-              Ingen transaksjoner ennå. Kjør seed/import for å fylle databasen.
+              Ingen transaksjoner ennå. Kjør seed/import for å fylle
+              databasen.
             </p>
           ) : (
-            visible.map((t) => (
-              <div className="row" key={t.id}>
+            visible.map((transaction) => (
+              <div className="row" key={transaction.id}>
                 <div>
-                  <strong>{t.merchant ?? t.description}</strong>
+                  <strong>
+                    {transaction.merchant ?? transaction.description}
+                  </strong>
+
                   <small>
-                    {t.posted_at} · {t.account}
-                    {t.owner ? ` · ${t.owner}` : ''}
+                    {transaction.posted_at} · {transaction.account}
+                    {transaction.owner
+                      ? ` · ${transaction.owner}`
+                      : ''}
                   </small>
                 </div>
+
                 <span className="pill">
-                  {t.ownership ?? 'Uavklart'} ·{' '}
-                  {t.confidence ? Math.round(Number(t.confidence) * 100) : 0}%
+                  {transaction.ownership ?? 'Uavklart'} ·{' '}
+                  {transaction.confidence
+                    ? Math.round(
+                        Number(transaction.confidence) * 100,
+                      )
+                    : 0}
+                  %
                 </span>
-                <b>{money(t.amount)}</b>
+
+                <b>{money(transaction.amount)}</b>
               </div>
             ))
           )}
@@ -121,7 +186,16 @@ function App() {
     </main>
   );
 }
-function Stat({ label, value, note }: { label: string; value: string; note: string }) {
+
+function Stat({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: string;
+  note: string;
+}) {
   return (
     <div className="stat">
       <span>{label}</span>
@@ -130,4 +204,9 @@ function Stat({ label, value, note }: { label: string; value: string; note: stri
     </div>
   );
 }
-createRoot(document.getElementById('root')!).render(<App />);
+
+createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
