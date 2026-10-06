@@ -34,13 +34,36 @@ class ClassificationUpdate(BaseModel):
     category_id: UUID | None = None
 
 
-class CsvPreviewRow(BaseModel):
+class PersonRead(BaseModel):
+    id: UUID
+    name: str
+
+
+class PersonCreate(BaseModel):
+    name: str
+
+
+class AccountRead(BaseModel):
+    id: UUID
+    name: str
+    type: str
+    owner_id: UUID | None = None
+    owner: str | None = None
+
+
+class AccountCreate(BaseModel):
+    name: str
+    type: str
+    owner_id: UUID | None = None
+
+
+class ImportRow(BaseModel):
     row_number: int
     posted_at: date
     description: str
     amount: Decimal
     currency: str = "NOK"
-    merchant: str
+    merchant: str = ""
     category: str | None = None
     ownership: str | None = None
     confidence: Decimal | None = None
@@ -48,20 +71,14 @@ class CsvPreviewRow(BaseModel):
     error: str | None = None
 
 
-class CsvPreviewResponse(BaseModel):
+class CsvImportRequest(BaseModel):
+    account_id: UUID
+    rows: list[ImportRow]
+
+
+class ImportPreviewRead(BaseModel):
     filename: str
     total_rows: int
     valid_rows: int
     error_rows: int
-    rows: list[CsvPreviewRow]
-
-
-class CsvImportRequest(BaseModel):
-    account_id: UUID
-    rows: list[CsvPreviewRow]
-
-
-class CsvImportResponse(BaseModel):
-    imported: int
-    skipped: int
-    transaction_ids: list[UUID]
+    rows: list[ImportRow]

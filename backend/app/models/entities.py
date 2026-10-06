@@ -5,18 +5,7 @@ from decimal import Decimal
 from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlalchemy import (
-    Date,
-    DateTime,
-    Enum as SAEnum,
-    ForeignKey,
-    Integer,
-    Numeric,
-    String,
-    Text,
-    func,
-    UniqueConstraint,
-)
+from sqlalchemy import Date, DateTime, Enum as SAEnum, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -60,21 +49,10 @@ class Category(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
 
 
-class MonthlyPeriod(Base):
-    __tablename__ = "monthly_periods"
-    __table_args__ = (UniqueConstraint("year", "month", name="uq_monthly_periods_year_month"),)
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    year: Mapped[int] = mapped_column(Integer, nullable=False)
-    month: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), default="open", nullable=False)
-    settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-
-
 class Transaction(Base):
     __tablename__ = "transactions"
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     account_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id"), nullable=False)
-    period_id: Mapped[UUID | None] = mapped_column(ForeignKey("monthly_periods.id"), index=True)
     merchant_id: Mapped[UUID | None] = mapped_column(ForeignKey("merchants.id"))
     category_id: Mapped[UUID | None] = mapped_column(ForeignKey("categories.id"))
     posted_at: Mapped[date] = mapped_column(Date, nullable=False)
