@@ -206,3 +206,160 @@ button {
 .error small {
   opacity: 0.7;
 }
+.monthbar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+.monthbar button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 22px;
+}
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: #0008;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 10;
+}
+.modal {
+  width: min(900px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 20px 60px #0005;
+}
+.modalHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+.modalHead h2 {
+  margin: 0 0 4px;
+}
+.modalHead p {
+  margin: 0;
+  color: var(--muted);
+}
+.modalHead > button {
+  font-size: 22px;
+  border: 0;
+  padding: 2px 8px;
+}
+.dropzone {
+  margin: 22px 0;
+  padding: 38px;
+  border: 2px dashed var(--line);
+  border-radius: 14px;
+  text-align: center;
+  display: grid;
+  gap: 5px;
+  cursor: pointer;
+}
+.dropzone span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.field {
+  display: grid;
+  gap: 6px;
+}
+.field span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.field input {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px;
+  background: var(--surface2);
+  color: var(--text);
+}
+.importSummary {
+  display: flex;
+  justify-content: space-between;
+  margin: 18px 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--surface2);
+}
+.importSummary span {
+  color: var(--muted);
+}
+.previewTable {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.previewRow {
+  display: grid;
+  grid-template-columns: 100px 1fr 110px 130px;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.previewRow:last-child {
+  border-bottom: 0;
+}
+.previewRow.bad {
+  background: #b4231810;
+}
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+@media (max-width: 700px) {
+  .previewRow {
+    grid-template-columns: 1fr 1fr;
+  }
+  .importSummary {
+    display: grid;
+    gap: 5px;
+  }
+}
+.field select {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px;
+  background: var(--surface2);
+  color: var(--text);
+}
+.dropzone.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.monthbar select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 32px 9px 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+}
+.previewRow select {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 5px;
+  background: var(--surface2);
+  color: var(--text);
+  min-width: 90px;
+}
+.rowError {
+  grid-column: 1/-1;
+  color: #b42318;
+  font-size: 11px;
+}
