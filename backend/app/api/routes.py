@@ -21,7 +21,16 @@ from app.api.schemas import (
     TransactionRead,
 )
 from app.db.session import SessionLocal
-from app.models.entities import Account, AccountType, Allocation, Category, Merchant, Ownership, Person, Transaction
+from app.models.entities import (
+    Account,
+    AccountType,
+    Allocation,
+    Category,
+    Merchant,
+    Ownership,
+    Person,
+    Transaction,
+)
 from app.services.classification import classify
 
 router = APIRouter(prefix="/api")
@@ -81,9 +90,11 @@ def create_person(payload: PersonCreate, db: Session = Depends(get_db)):
 
 @router.get("/accounts", response_model=list[AccountRead])
 def list_accounts(db: Session = Depends(get_db)):
-    accounts = db.scalars(
-        select(Account).options(joinedload(Account.owner)).order_by(Account.name)
-    ).unique().all()
+    accounts = (
+        db.scalars(select(Account).options(joinedload(Account.owner)).order_by(Account.name))
+        .unique()
+        .all()
+    )
     return [
         AccountRead(
             id=account.id,
@@ -123,7 +134,6 @@ def create_account(payload: AccountCreate, db: Session = Depends(get_db)):
         owner_id=account.owner_id,
         owner=owner.name if owner else None,
     )
-
 
 
 def _parse_date(value: str) -> date:

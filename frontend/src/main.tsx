@@ -167,7 +167,8 @@ function App() {
         body: JSON.stringify({ name }),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.detail ?? `Could not create person (${response.status})`);
+      if (!response.ok)
+        throw new Error(body.detail ?? `Could not create person (${response.status})`);
 
       const person: Person = body;
       setPeople((current) =>
@@ -205,7 +206,8 @@ function App() {
         }),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.detail ?? `Could not create account (${response.status})`);
+      if (!response.ok)
+        throw new Error(body.detail ?? `Could not create account (${response.status})`);
 
       const account: Account = body;
       setAccounts((current) =>
@@ -242,7 +244,8 @@ function App() {
         { method: 'POST', body: form },
       );
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.detail ?? `Import preview failed (${response.status})`);
+      if (!response.ok)
+        throw new Error(body.detail ?? `Import preview failed (${response.status})`);
       setPreview(body);
     } catch (err) {
       setImportError(err instanceof Error ? err.message : 'Import preview failed');
@@ -375,7 +378,11 @@ function App() {
           <Stat label="Totalt brukt" value={money(total)} note="Valgt måned" />
           <Stat label="Felles" value={money(commonTotal)} note="Klassifisert felles" />
           <Stat label="Trenger svar" value={String(reviewCount)} note="Lav confidence" />
-          <Stat label="Transaksjoner" value={String(monthTransactions.length)} note="I valgt måned" />
+          <Stat
+            label="Transaksjoner"
+            value={String(monthTransactions.length)}
+            note="I valgt måned"
+          />
         </section>
 
         <section className="card">
@@ -421,10 +428,7 @@ function App() {
                 </div>
                 <span className="pill">
                   {transaction.ownership ?? 'Uavklart'} ·{' '}
-                  {transaction.confidence
-                    ? Math.round(Number(transaction.confidence) * 100)
-                    : 0}
-                  %
+                  {transaction.confidence ? Math.round(Number(transaction.confidence) * 100) : 0}%
                 </span>
                 <b>{money(transaction.amount)}</b>
               </div>
@@ -605,7 +609,8 @@ function App() {
 
                 {accounts.length === 0 && (
                   <div className="importHint">
-                    Du har ingen kontoer ennå. Opprett en konto under <strong>Kontoer</strong> først.
+                    Du har ingen kontoer ennå. Opprett en konto under <strong>Kontoer</strong>{' '}
+                    først.
                   </div>
                 )}
               </>
