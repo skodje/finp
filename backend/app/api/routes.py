@@ -331,7 +331,7 @@ def create_transaction(payload: TransactionCreate, db: Session = Depends(get_db)
 
 
 @router.patch("/transactions/{transaction_id}/classification", response_model=TransactionRead)
-def classify(transaction_id: UUID, payload: ClassificationUpdate, db: Session = Depends(get_db)):
+def update_classification(transaction_id: UUID, payload: ClassificationUpdate, db: Session = Depends(get_db)):
     tx = db.get(Transaction, transaction_id)
     if not tx:
         raise HTTPException(404, "Transaction not found")
