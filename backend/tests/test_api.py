@@ -79,3 +79,142 @@ def test_preview_flags_rows_already_stored(client):
     ).json()
     assert (preview["valid_rows"], preview["duplicate_rows"]) == (1, 3)
     assert [r["duplicate"] for r in preview["rows"]] == [True, True, True, False]
+
+
+def test_edit_transaction_account_person(client):
+    pid = client.post("/api/persons", json={"name": "Lars"}).json()["id"]
+    other = client.post("/api/persons", json={"name": "Kari"}).json()["id"]
+    assert client.patch(f"/api/persons/{pid}", json={"name": "Kari"}).status_code == 400
+    assert client.patch(f"/api/persons/{pid}", json={"name": "Lasse"}).json()["name"] == "Lasse"
+    acc = client.post("/api/accounts", json={"name": "A", "type": "bank"}).json()
+    r = client.patch(
+        f"/api/accounts/{acc['id']}", json={"name": "B", "type": "credit_card", "owner_id": other}
+    ).json()
+    assert (r["name"], r["owner"]) == ("B", "Kari")
+    tx = client.post(
+        "/api/transactions",
+        json={
+            "account_id": acc["id"],
+            "posted_at": "2026-01-02",
+            "description": "x",
+            "amount": "5",
+        },
+    ).json()
+    r = client.patch(
+        f"/api/transactions/{tx['id']}",
+        json={
+            "posted_at": "2026-01-03",
+            "description": "y",
+            "amount": "7.50",
+            "category": "Mat",
+            "ownership": "private",
+            "person_id": pid,
+        },
+    ).json()
+    assert (r["description"], r["amount"], r["category"], r["ownership"]) == (
+        "y",
+        "7.50",
+        "Mat",
+        "private",
+    )
+
+
+def test_settlement_and_transfers(client):
+    ids = {n: client.post("/api/persons", json={"name": n}).json()["id"] for n in ("Ann", "Bob")}
+    acc = {
+        n: client.post(
+            "/api/accounts", json={"name": n, "type": "bank", "owner_id": ids[n]}
+        ).json()["id"]
+        for n in ids
+    }
+
+    def add(n, desc, amount, ownership=None, person=None):
+        tx = client.post(
+            "/api/transactions",
+            json={
+                "account_id": acc[n],
+                "posted_at": "2026-02-10",
+                "description": desc,
+                "amount": amount,
+            },
+        ).json()
+        if ownership:
+            client.patch(
+                f"/api/transactions/{tx['id']}/classification",
+                json={"ownership": ownership, "person_id": person},
+            )
+        return tx
+
+    add("Ann", "Strøm", "1000", "common")  # Bob owes Ann 500
+    add("Bob", "Mat", "200", "common")  # Ann owes Bob 100
+    add("Bob", "Gave til Ann", "300", "private", ids["Ann"])  # Ann owes Bob 300
+    add("Ann", "Innbetaling", "5000", "common")  # auto-flagged transfer, ignored
+    add("Ann", "Ukjent", "99")  # unclassified
+    r = client.get("/api/settlement?month=2026-02").json()
+    assert r["payments"] == [{"from": "Bob", "to": "Ann", "amount": "100.00"}]
+    assert r["unclassified"] == 1
+
+
+def test_custom_split_and_mark_settled(client):
+    ann = client.post("/api/persons", json={"name": "Ann", "common_share": "60"}).json()
+    bob = client.post("/api/persons", json={"name": "Bob", "common_share": "40"}).json()
+    acc = client.post(
+        "/api/accounts", json={"name": "A", "type": "bank", "owner_id": ann["id"]}
+    ).json()
+    tx = client.post(
+        "/api/transactions",
+        json={
+            "account_id": acc["id"],
+            "posted_at": "2026-03-05",
+            "description": "Strøm",
+            "amount": "1000",
+        },
+    ).json()
+    client.patch(f"/api/transactions/{tx['id']}/classification", json={"ownership": "common"})
+    url = "/api/settlement?month=2026-03"
+    assert client.get(url).json()["payments"] == [{"from": "Bob", "to": "Ann", "amount": "400.00"}]
+    assert client.post(url).json()["settled_at"]
+    assert client.post(url).status_code == 400
+    # frozen: later edits to the split don't change a settled month
+    client.patch(f"/api/persons/{bob['id']}", json={"name": "Bob", "common_share": "10"})
+    assert client.get(url).json()["payments"][0]["amount"] == "400.00"
+    assert [h["month"] for h in client.get("/api/settlements").json()] == ["2026-03"]
+    assert client.delete(url).status_code == 204
+    assert client.get("/api/settlements").json() == []
+
+
+def test_per_transaction_split(client):
+    ann = client.post("/api/persons", json={"name": "Ann"}).json()
+    bob = client.post("/api/persons", json={"name": "Bob"}).json()
+    acc = client.post(
+        "/api/accounts", json={"name": "A", "type": "bank", "owner_id": ann["id"]}
+    ).json()
+    tx = client.post(
+        "/api/transactions",
+        json={
+            "account_id": acc["id"],
+            "posted_at": "2026-04-05",
+            "description": "Strøm",
+            "amount": "1000",
+        },
+    ).json()
+
+    def edit(splits):
+        return client.patch(
+            f"/api/transactions/{tx['id']}",
+            json={
+                "posted_at": "2026-04-05",
+                "description": "Strøm",
+                "amount": "1000",
+                "splits": splits,
+            },
+        )
+
+    def part(p, pct):
+        return {"ownership": "private", "person_id": p["id"], "percentage": pct}
+
+    assert edit([part(ann, "70"), part(bob, "20")]).status_code == 400  # not 100
+    r = edit([part(ann, "70"), part(bob, "30")]).json()
+    assert r["ownership"] == "split" and len(r["splits"]) == 2
+    pay = client.get("/api/settlement?month=2026-04").json()["payments"]
+    assert pay == [{"from": "Bob", "to": "Ann", "amount": "300.00"}]

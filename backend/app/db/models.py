@@ -4,7 +4,18 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import Date, DateTime, Enum as SAEnum, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import (
+    Date,
+    DateTime,
+    Enum as SAEnum,
+    ForeignKey,
+    JSON,
+    Numeric,
+    String,
+    Text,
+    false,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -15,6 +26,10 @@ class Person(Base):
     __tablename__ = "persons"
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    # weight of this person in splitting common expenses (60 and 40 = 60/40)
+    common_share: Mapped[Decimal] = mapped_column(
+        Numeric(6, 2), default=Decimal("1"), server_default="1", nullable=False
+    )
 
 
 class Account(Base):
@@ -49,6 +64,7 @@ class Transaction(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default="NOK", nullable=False)
+    is_transfer: Mapped[bool] = mapped_column(default=False, server_default=false(), nullable=False)
     classification_confidence: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -79,3 +95,12 @@ class Rule(Base):
     ownership: Mapped[Ownership] = mapped_column(SAEnum(Ownership), nullable=False)
     person_id: Mapped[UUID | None] = mapped_column(ForeignKey("persons.id"))
     confidence: Mapped[Decimal] = mapped_column(Numeric(5, 4), default=Decimal("0.90"))
+
+
+class SettledMonth(Base):
+    """A month marked as settled, with the result frozen at that time."""
+
+    __tablename__ = "settled_months"
+    month: Mapped[str] = mapped_column(String(7), primary_key=True)
+    settled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)

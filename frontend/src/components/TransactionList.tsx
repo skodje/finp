@@ -9,6 +9,7 @@ type Props = {
   error: string | null;
   filter: string;
   onFilterChange: (filter: string) => void;
+  onEdit: (tx: Tx) => void;
 };
 
 const FILTERS = [
@@ -22,7 +23,7 @@ const UNCATEGORIZED = 'Ukategorisert';
 function groupByCategory(transactions: Tx[]) {
   const groups = new Map<string, { items: Tx[]; total: number }>();
   for (const tx of transactions) {
-    const key = tx.category ?? UNCATEGORIZED;
+    const key = tx.is_transfer ? 'Overføringer' : (tx.category ?? UNCATEGORIZED);
     const group = groups.get(key) ?? { items: [], total: 0 };
     group.items.push(tx);
     group.total += Number(tx.amount);
@@ -32,9 +33,10 @@ function groupByCategory(transactions: Tx[]) {
   return [...groups.entries()].sort((a, b) => b[1].total - a[1].total);
 }
 
-function TransactionRow({ transaction }: { transaction: Tx }) {
+function TransactionRow({ transaction, onEdit }: { transaction: Tx; onEdit: (tx: Tx) => void }) {
   return (
-    <div className="row">
+    <div className={`row${transaction.is_transfer ? ' transfer' : ''}`}
+      onClick={() => onEdit(transaction)} style={{ cursor: 'pointer' }}>
       <div>
         <strong>{transaction.merchant ?? transaction.description}</strong>
         <small>
@@ -43,7 +45,7 @@ function TransactionRow({ transaction }: { transaction: Tx }) {
         </small>
       </div>
       <span className="pill">
-        {transaction.ownership ?? 'Uavklart'} ·{' '}
+        {transaction.ownership === 'split' ? 'Delt' : (transaction.ownership ?? 'Uavklart')} ·{' '}
         {transaction.confidence ? Math.round(Number(transaction.confidence) * 100) : 0}%
       </span>
       <b>{money(transaction.amount)}</b>
@@ -51,7 +53,7 @@ function TransactionRow({ transaction }: { transaction: Tx }) {
   );
 }
 
-export function TransactionList({ transactions, loading, error, filter, onFilterChange }: Props) {
+export function TransactionList({ transactions, loading, error, filter, onFilterChange, onEdit }: Props) {
   const [grouped, setGrouped] = useState(true);
 
   return (
@@ -102,13 +104,13 @@ export function TransactionList({ transactions, loading, error, filter, onFilter
               <b>{money(total)}</b>
             </summary>
             {items.map((transaction) => (
-              <TransactionRow transaction={transaction} key={transaction.id} />
+              <TransactionRow transaction={transaction} onEdit={onEdit} key={transaction.id} />
             ))}
           </details>
         ))
       ) : (
         transactions.map((transaction) => (
-          <TransactionRow transaction={transaction} key={transaction.id} />
+          <TransactionRow transaction={transaction} onEdit={onEdit} key={transaction.id} />
         ))
       )}
     </section>

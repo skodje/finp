@@ -8,42 +8,21 @@ type Props = {
   accounts: Account[];
   people: Person[];
   onClose: () => void;
-  onPersonCreated: (person: Person) => void;
-  onAccountCreated: (account: Account) => void;
+  onAccountSaved: (account: Account) => void;
 };
 
 export function AccountsModal({
   accounts,
   people,
   onClose,
-  onPersonCreated,
-  onAccountCreated,
+  onAccountSaved,
 }: Props) {
   const [name, setName] = useState('');
   const [type, setType] = useState<Account['type']>('credit_card');
   const [owner, setOwner] = useState('');
-  const [personName, setPersonName] = useState('');
+  const [editing, setEditing] = useState<string | null>(null); // account id being edited
   const [savingAccount, setSavingAccount] = useState(false);
-  const [savingPerson, setSavingPerson] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  async function addPerson() {
-    const trimmed = personName.trim();
-    if (!trimmed) return;
-
-    setSavingPerson(true);
-    setError(null);
-    try {
-      const person = await api.createPerson(trimmed);
-      onPersonCreated(person);
-      setOwner(person.id);
-      setPersonName('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create person');
-    } finally {
-      setSavingPerson(false);
-    }
-  }
 
   async function addAccount(event: FormEvent) {
     event.preventDefault();
@@ -55,15 +34,11 @@ export function AccountsModal({
     setSavingAccount(true);
     setError(null);
     try {
-      const account = await api.createAccount({
-        name: name.trim(),
-        type,
-        owner_id: owner || null,
-      });
-      onAccountCreated(account);
+      const data = { name: name.trim(), type, owner_id: owner || null };
+      onAccountSaved(await (editing ? api.updateAccount(editing, data) : api.createAccount(data)));
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create account');
+      setError(err instanceof Error ? err.message : 'Could not save account');
       setSavingAccount(false);
     }
   }
@@ -87,13 +62,24 @@ export function AccountsModal({
                   {account.owner ? ` · ${account.owner}` : ' · Felles'}
                 </span>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(account.id);
+                  setName(account.name);
+                  setType(account.type);
+                  setOwner(account.owner_id ?? '');
+                }}
+              >
+                Rediger
+              </button>
             </div>
           ))
         )}
       </div>
 
       <form className="accountForm" onSubmit={addAccount}>
-        <h3>Ny konto eller kort</h3>
+        <h3>{editing ? 'Rediger konto' : 'Ny konto eller kort'}</h3>
 
         <label className="field">
           <span>Navn</span>
@@ -137,23 +123,6 @@ export function AccountsModal({
           </select>
         </label>
 
-        <div className="newPerson">
-          <label className="field">
-            <span>Ny person</span>
-            <input
-              id="person-name"
-              name="personName"
-              value={personName}
-              onChange={(event) => setPersonName(event.target.value)}
-              placeholder="F.eks. Lars"
-              autoComplete="off"
-            />
-          </label>
-          <button type="button" onClick={addPerson} disabled={savingPerson || !personName.trim()}>
-            {savingPerson ? 'Oppretter…' : 'Legg til'}
-          </button>
-        </div>
-
         {error && <div className="error">{error}</div>}
 
         <div className="modalActions">
@@ -161,7 +130,7 @@ export function AccountsModal({
             Avbryt
           </button>
           <button type="submit" className="primary" disabled={savingAccount}>
-            {savingAccount ? 'Lagrer…' : 'Opprett konto'}
+            {savingAccount ? 'Lagrer…' : editing ? 'Lagre' : 'Opprett konto'}
           </button>
         </div>
       </form>

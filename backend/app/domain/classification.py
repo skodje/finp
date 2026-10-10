@@ -20,6 +20,15 @@ DEFAULT_RULES = {
 }
 
 
+# Card-bill payments and account-to-account moves: not expenses, must not be split.
+TRANSFER_HINTS = ("innbetaling", "avdrag", "kortregning", "betaling mottatt", "payment received")
+
+
+def is_transfer(description: str) -> bool:
+    normalized = description.casefold()
+    return any(hint in normalized for hint in TRANSFER_HINTS)
+
+
 def classify(description: str) -> Classification | None:
     normalized = description.casefold()
     for pattern, result in DEFAULT_RULES.items():

@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from app.domain.csv_parsing import parse_amount, parse_csv, parse_date
+from app.domain.csv_parsing import parse_amount, parse_csv, parse_date, read_csv
 from app.domain.enums import Ownership
 from app.domain.errors import Invalid
 
@@ -64,3 +64,32 @@ def test_parse_csv_latin1_and_long_description():
 def test_parse_csv_without_header():
     with pytest.raises(Invalid):
         parse_csv(b"")
+
+
+def test_headerless_csv_columns_are_inferred():
+    csv_text = (
+        "04.03.2025;REMA 1000 Storo;-249,90;10 000,00\n05.03.2025;Innbetaling;5 000,00;15 000,00\n"
+    )
+    rows = parse_csv(csv_text.encode())
+    assert [(r.row_number, r.posted_at, r.description, r.amount, r.error) for r in rows] == [
+        (1, date(2025, 3, 4), "REMA 1000 Storo", Decimal("-249.90"), None),
+        (2, date(2025, 3, 5), "Innbetaling", Decimal("5000.00"), None),
+    ]
+    assert rows[1].is_transfer
+
+
+def test_unrecognisable_gives_row_errors_and_can_be_mapped_by_hand():
+    data = b"foo;bar;baz\n10.03.2025;Kiosk;12,50\n"
+    assert all(r.error for r in read_csv(data).rows)
+    got = read_csv(data, {"date": 0, "description": 1, "amount": 2}, header=True)
+    assert [(r.description, r.amount, r.error) for r in got.rows] == [
+        ("Kiosk", Decimal("12.50"), None)
+    ]
+    assert got.columns == ["foo", "bar", "baz"]
+
+
+def test_mapping_overrides_inferred_amount():
+    data = b"04.03.2025;Kiosk;10 000,00;-99,00\n"
+    assert read_csv(data).rows[0].amount == Decimal("10000.00")  # wrong guess: balance first
+    got = read_csv(data, {"amount": 3})
+    assert got.rows[0].amount == Decimal("-99.00") and got.mapping["amount"] == 3

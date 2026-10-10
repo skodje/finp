@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Allocation, Category, Merchant, Transaction
-from app.domain.csv_parsing import ParsedRow, parse_csv
+from app.domain.csv_parsing import CsvRead, ParsedRow, read_csv
 from app.domain.errors import Invalid
 from app.services.accounts import require_account
 
@@ -59,14 +59,20 @@ def _split_duplicates(
     return new, duplicates
 
 
-def preview_csv(db: Session, account_id: UUID, content: bytes) -> tuple[list[ParsedRow], set[int]]:
-    """Parsed rows plus the row numbers that are already stored (shown as skipped in the UI)."""
+def preview_csv(
+    db: Session,
+    account_id: UUID,
+    content: bytes,
+    mapping: dict[str, int | None] | None = None,
+    header: bool | None = None,
+) -> tuple[CsvRead, set[int]]:
+    """Parsed CSV plus the row numbers that are already stored (shown as skipped in the UI)."""
     require_account(db, account_id)
     if len(content) > MAX_CSV_BYTES:
         raise Invalid("Filen er for stor (maks 5 MB).")
-    rows = parse_csv(content)
-    _, duplicates = _split_duplicates(db, account_id, [r for r in rows if not r.error])
-    return rows, {r.row_number for r in duplicates}
+    parsed = read_csv(content, mapping, header)
+    _, duplicates = _split_duplicates(db, account_id, [r for r in parsed.rows if not r.error])
+    return parsed, {r.row_number for r in duplicates}
 
 
 def commit_import(db: Session, account_id: UUID, rows: Sequence[ParsedRow]) -> ImportResult:
@@ -112,6 +118,7 @@ def commit_import(db: Session, account_id: UUID, rows: Sequence[ParsedRow]) -> I
             description=row.description,
             amount=row.amount,
             currency=row.currency,
+            is_transfer=row.is_transfer,
             classification_confidence=row.confidence,
         )
         if row.ownership:

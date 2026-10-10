@@ -33,6 +33,7 @@ export function ImportModal({
   onClose,
   onImported,
 }: Props) {
+  const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,14 +43,15 @@ export function ImportModal({
     if (!importing) onClose();
   };
 
-  async function loadPreview(file: File) {
+  async function loadPreview(file: File, opts: api.CsvMapping = {}) {
     if (!selectedAccount) {
       setError('Velg konto eller kort før du velger CSV-fil.');
       return;
     }
     setError(null);
     try {
-      setPreview(await api.previewCsv(selectedAccount, file));
+      setPreview(await api.previewCsv(selectedAccount, file, opts));
+      setFile(file);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import preview failed');
     }
@@ -151,6 +153,48 @@ export function ImportModal({
               {preview.filename}
             </span>
           </div>
+
+          {file && (
+            <details className="columnMap" open={preview.error_rows > 0}>
+              <summary>Kolonner</summary>
+              {(['date', 'description', 'amount'] as const).map((field) => (
+                <label className="field" key={field}>
+                  <span>{{ date: 'Dato', description: 'Beskrivelse', amount: 'Beløp' }[field]}</span>
+                  <select
+                    value={preview.mapping[field] ?? ''}
+                    onChange={(event) =>
+                      void loadPreview(file, {
+                        header: preview.has_header,
+                        mapping: { ...preview.mapping, [field]: Number(event.target.value) },
+                      })
+                    }
+                  >
+                    {preview.mapping[field] == null && <option value="">Velg kolonne…</option>}
+                    {preview.columns.map((label, index) => (
+                      <option key={index} value={index}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+              <label className="field">
+                <span>
+                  <input
+                    type="checkbox"
+                    checked={preview.has_header}
+                    onChange={(event) =>
+                      void loadPreview(file, {
+                        header: event.target.checked,
+                        mapping: preview.mapping,
+                      })
+                    }
+                  />{' '}
+                  Første rad er overskrift
+                </span>
+              </label>
+            </details>
+          )}
 
           <div className="previewTable">
             {preview.rows.slice(0, PREVIEW_LIMIT).map((row) => (

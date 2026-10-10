@@ -6,8 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import Account, Allocation, Category, Person, Transaction
+from app.domain.classification import is_transfer as looks_like_transfer
 from app.domain.enums import Ownership
-from app.domain.errors import NotFound
+from app.domain.errors import Invalid, NotFound
 from app.services.accounts import require_account
 
 
@@ -51,6 +52,7 @@ def create_transaction(
         description=description,
         amount=amount,
         currency=currency,
+        is_transfer=looks_like_transfer(description),
     )
     db.add(tx)
     db.commit()
@@ -77,5 +79,46 @@ def update_classification(
     if category_id:
         tx.category_id = category_id
     tx.classification_confidence = Decimal("1.0000")
+    db.commit()
+    return load_transaction(db, transaction_id)
+
+
+def update_transaction(
+    db: Session,
+    transaction_id: UUID,
+    posted_at: date,
+    description: str,
+    amount: Decimal,
+    category: str | None,
+    ownership: Ownership | None,
+    person_id: UUID | None,
+    splits: list | None,
+    is_transfer: bool,
+) -> Transaction:
+    tx = load_transaction(db, transaction_id)
+    if person_id and not db.get(Person, person_id):
+        raise NotFound("Person ikke funnet")
+    tx.is_transfer = is_transfer
+    tx.posted_at, tx.description, tx.amount = posted_at, description, amount
+    if category:
+        cat = db.scalars(select(Category).where(Category.name == category)).first()
+        tx.category = cat or Category(name=category)
+    else:
+        tx.category = None
+    if splits:
+        if sum(s["percentage"] for s in splits) != 100:
+            raise Invalid("Fordelingen må summere til 100 %.")
+        for s in splits:
+            if s["person_id"] and not db.get(Person, s["person_id"]):
+                raise NotFound("Person ikke funnet")
+        tx.allocations.clear()
+        tx.allocations.extend(Allocation(**s) for s in splits)
+        tx.classification_confidence = Decimal("1.0000")
+    elif ownership:
+        tx.allocations.clear()
+        tx.allocations.append(
+            Allocation(ownership=ownership, person_id=person_id, percentage=Decimal("100"))
+        )
+        tx.classification_confidence = Decimal("1.0000")
     db.commit()
     return load_transaction(db, transaction_id)

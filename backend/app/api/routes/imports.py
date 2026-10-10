@@ -17,6 +17,10 @@ router = APIRouter()
 @router.post("/imports/csv/preview", response_model=ImportPreviewRead)
 def preview_csv(
     account_id: UUID = Query(...),
+    date_col: int | None = Query(None),
+    description_col: int | None = Query(None),
+    amount_col: int | None = Query(None),
+    header: bool | None = Query(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
@@ -24,7 +28,9 @@ def preview_csv(
         raise Invalid("Last opp en CSV-fil.")
 
     content = file.file.read(svc.MAX_CSV_BYTES + 1)  # +1 so the service can detect oversize
-    rows, duplicates = svc.preview_csv(db, account_id, content)
+    mapping = {"date": date_col, "description": description_col, "amount": amount_col}
+    parsed, duplicates = svc.preview_csv(db, account_id, content, mapping, header)
+    rows = parsed.rows
     errors = sum(1 for r in rows if r.error is not None)
     return ImportPreviewRead(
         filename=file.filename,
@@ -32,6 +38,9 @@ def preview_csv(
         valid_rows=len(rows) - errors - len(duplicates),  # rows that will actually be added
         duplicate_rows=len(duplicates),
         error_rows=errors,
+        columns=parsed.columns,
+        mapping=parsed.mapping,
+        has_header=parsed.has_header,
         rows=[
             ImportRow(account_id=account_id, duplicate=r.row_number in duplicates, **asdict(r))
             for r in rows
