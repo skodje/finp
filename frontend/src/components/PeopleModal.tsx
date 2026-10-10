@@ -37,14 +37,13 @@ export function PeopleModal({ people, onClose, onSaved }: Props) {
   }
 
   return (
-    <Modal title="Personer" subtitle="Felles utgifter fordeles etter andel, f.eks. 60 og 40 gir 60/40. Lik andel = 1 og 1." onClose={onClose}>
+    <Modal title="Personer" subtitle="Opprett person som er med på husøkonomien." onClose={onClose}>
       <div className="accountList">
         {people.length === 0 && <p className="muted">Ingen personer opprettet ennå.</p>}
         {people.map((person) => (
           <div className="accountRow" key={person.id}>
             <div>
               <strong>{person.name}</strong>
-              <span>Andel av felles: {Number(person.common_share)}</span>
             </div>
             <button
               type="button"
@@ -69,15 +68,6 @@ export function PeopleModal({ people, onClose, onSaved }: Props) {
             onChange={(event) => setName(event.target.value)}
             placeholder="F.eks. Lars"
             autoComplete="off"
-          />
-        </label>
-        <label className="field">
-          <span>Andel av felles</span>
-          <input
-            name="commonShare"
-            inputMode="decimal"
-            value={share}
-            onChange={(event) => setShare(event.target.value.replace(',', '.'))}
           />
         </label>
         <button type="submit" className="primary" disabled={saving || !name.trim()}>
