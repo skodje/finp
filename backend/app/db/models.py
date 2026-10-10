@@ -2,29 +2,19 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
-from enum import Enum
 from uuid import UUID, uuid4
 
 from sqlalchemy import Date, DateTime, Enum as SAEnum, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
-
-
-class Ownership(str, Enum):
-    COMMON = "common"
-    PRIVATE = "private"
-
-
-class AccountType(str, Enum):
-    BANK = "bank"
-    CREDIT_CARD = "credit_card"
+from app.domain.enums import AccountType, Ownership
 
 
 class Person(Base):
     __tablename__ = "persons"
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
 
 
 class Account(Base):

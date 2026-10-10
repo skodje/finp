@@ -1,4 +1,4 @@
-from app.services.classification import classify
+from app.domain.classification import classify
 
 
 def test_rema_is_common_food():

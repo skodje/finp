@@ -481,3 +481,47 @@ button:disabled {
     grid-column: 1 / -1;
   }
 }
+
+.previewRow.dup {
+  opacity: 0.55;
+}
+
+.rowNote {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.group summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+  list-style: none;
+}
+
+.group summary::-webkit-details-marker {
+  display: none;
+}
+
+.group summary b {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.group .chevron {
+  display: inline-block;
+  width: 14px;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.group[open] .chevron {
+  transform: rotate(90deg);
+}
+
+.group .row {
+  padding-left: 24px;
+}
