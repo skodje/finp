@@ -151,7 +151,7 @@ def test_settlement_and_transfers(client):
     add("Ann", "Innbetaling", "5000", "common")  # auto-flagged transfer, ignored
     add("Ann", "Ukjent", "99")  # unclassified
     r = client.get("/api/settlement?month=2026-02").json()
-    assert r["payments"] == [{"from": "Bob", "to": "Ann", "amount": "100.00"}]
+    assert r["payments"] == [{"from": "Ann", "to": "Bob", "amount": "100.00"}]
     assert r["unclassified"] == 1
 
 
@@ -172,7 +172,7 @@ def test_custom_split_and_mark_settled(client):
     ).json()
     client.patch(f"/api/transactions/{tx['id']}/classification", json={"ownership": "common"})
     url = "/api/settlement?month=2026-03"
-    assert client.get(url).json()["payments"] == [{"from": "Bob", "to": "Ann", "amount": "400.00"}]
+    assert client.get(url).json()["payments"] == [{"from": "Ann", "to": "Bob", "amount": "400.00"}]
     assert client.post(url).json()["settled_at"]
     assert client.post(url).status_code == 400
     # frozen: later edits to the split don't change a settled month
@@ -217,4 +217,4 @@ def test_per_transaction_split(client):
     r = edit([part(ann, "70"), part(bob, "30")]).json()
     assert r["ownership"] == "split" and len(r["splits"]) == 2
     pay = client.get("/api/settlement?month=2026-04").json()["payments"]
-    assert pay == [{"from": "Bob", "to": "Ann", "amount": "300.00"}]
+    assert pay == [{"from": "Ann", "to": "Bob", "amount": "300.00"}]
