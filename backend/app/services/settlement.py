@@ -46,9 +46,10 @@ def settle(db: Session, month: str) -> dict:
         if not tx.allocations:
             unclassified += 1
             continue
-        balance[payer] += tx.amount
+        amount = -tx.amount  # flip the sign since expenses are negative.
+        balance[payer] += amount
         for alloc in tx.allocations:  # one per slice of the cost; percentages total 100
-            part = tx.amount * alloc.percentage / 100
+            part = amount * alloc.percentage / 100
             if alloc.ownership == Ownership.COMMON:
                 for p in persons:
                     balance[p.id] -= part * p.common_share / total_share
@@ -71,12 +72,14 @@ def settle(db: Session, month: str) -> dict:
         owed[j][0] -= amount
         i += debt[i][0] < CENT
         j += owed[j][0] < CENT
-    return {
+
+    ret = {
         "month": month,
         "balances": {people[p]: b for p, b in balance.items()},
         "payments": payments,
         "unclassified": unclassified,
     }
+    return ret
 
 
 def get_settlement(db: Session, month: str) -> dict:
