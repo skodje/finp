@@ -74,7 +74,7 @@ def update_classification(
 
     tx.allocations.clear()
     tx.allocations.append(
-        Allocation(ownership=ownership, person_id=person_id, percentage=Decimal("100"))
+        Allocation(ownership=ownership, person_id=person_id, percentage=Decimal(100))
     )
     if category_id:
         tx.category_id = category_id
@@ -117,7 +117,7 @@ def update_transaction(
     elif ownership:
         tx.allocations.clear()
         tx.allocations.append(
-            Allocation(ownership=ownership, person_id=person_id, percentage=Decimal("100"))
+            Allocation(ownership=ownership, person_id=person_id, percentage=Decimal(100))
         )
         tx.classification_confidence = Decimal("1.0000")
     db.commit()

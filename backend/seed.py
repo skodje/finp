@@ -1,8 +1,8 @@
 from datetime import date
 from decimal import Decimal
 
-from app.db.session import Base, SessionLocal, engine
 from app.db.models import Account, Allocation, Category, Merchant, Person, Transaction
+from app.db.session import Base, SessionLocal, engine
 from app.domain.classification import classify
 from app.domain.enums import AccountType, Ownership
 
@@ -48,7 +48,7 @@ def main():
                         transaction_id=tx.id,
                         ownership=Ownership.COMMON if result else Ownership.PRIVATE,
                         person_id=None,
-                        percentage=Decimal("100"),
+                        percentage=Decimal(100),
                     )
                 )
             db.commit()

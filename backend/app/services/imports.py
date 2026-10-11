@@ -122,7 +122,7 @@ def commit_import(db: Session, account_id: UUID, rows: Sequence[ParsedRow]) -> I
             classification_confidence=row.confidence,
         )
         if row.ownership:
-            tx.allocations.append(Allocation(ownership=row.ownership, percentage=Decimal("100")))
+            tx.allocations.append(Allocation(ownership=row.ownership, percentage=Decimal(100)))
         db.add(tx)
 
     db.commit()

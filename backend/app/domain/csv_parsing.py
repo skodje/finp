@@ -191,7 +191,7 @@ def read_csv(
                 raise ValueError("Beskrivelse mangler")
         except ValueError as exc:
             posted_at = date.today()
-            amount = Decimal("0")
+            amount = Decimal(0)
             error = str(exc)
 
         classification = classify(description)

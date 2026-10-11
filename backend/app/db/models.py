@@ -5,16 +5,18 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    JSON,
     Date,
     DateTime,
-    Enum as SAEnum,
     ForeignKey,
-    JSON,
     Numeric,
     String,
     Text,
     false,
     func,
+)
+from sqlalchemy import (
+    Enum as SAEnum,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,7 +30,7 @@ class Person(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     # weight of this person in splitting common expenses (60 and 40 = 60/40)
     common_share: Mapped[Decimal] = mapped_column(
-        Numeric(6, 2), default=Decimal("1"), server_default="1", nullable=False
+        Numeric(6, 2), default=Decimal(1), server_default="1", nullable=False
     )
 
 

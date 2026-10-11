@@ -11,8 +11,8 @@ from app.api.schemas import (
     TransactionRead,
     TransactionUpdate,
 )
-from app.services import transactions as svc
 from app.services import settlement as settle_svc
+from app.services import transactions as svc
 
 router = APIRouter()
 
