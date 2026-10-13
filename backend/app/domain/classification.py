@@ -15,8 +15,10 @@ DEFAULT_RULES = {
     "rema": Classification(Ownership.COMMON, Decimal("0.98"), "Mat"),
     "meny": Classification(Ownership.COMMON, Decimal("0.98"), "Mat"),
     "coop": Classification(Ownership.COMMON, Decimal("0.95"), "Mat"),
+    "kiwi": Classification(Ownership.COMMON, Decimal("0.95"), "Mat"),
     "circle k": Classification(Ownership.COMMON, Decimal("0.95"), "Bil"),
     "barnehage": Classification(Ownership.COMMON, Decimal("1.00"), "Barn"),
+    "lilleprinsen": Classification(Ownership.COMMON, Decimal("1.00"), "Barn"),
 }
 
 
