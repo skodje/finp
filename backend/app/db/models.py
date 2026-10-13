@@ -21,7 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
-from app.domain.enums import AccountType, Ownership
+from app.domain.enums import AccountType, ExpenseSign, Ownership
 
 
 class Person(Base):
@@ -40,6 +40,12 @@ class Account(Base):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     type: Mapped[AccountType] = mapped_column(SAEnum(AccountType), nullable=False)
     owner_id: Mapped[UUID | None] = mapped_column(ForeignKey("persons.id"))
+    expense_sign: Mapped[ExpenseSign] = mapped_column(
+        SAEnum(ExpenseSign, values_callable=lambda enum_cls: [item.value for item in enum_cls]),
+        default=ExpenseSign.NEGATIVE,
+        server_default="negative",
+        nullable=False,
+    )
     owner: Mapped[Person | None] = relationship()
 
 

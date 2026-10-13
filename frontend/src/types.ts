@@ -23,6 +23,7 @@ export type Account = {
   type: 'bank' | 'credit_card';
   owner_id: string | null;
   owner: string | null;
+  expense_sign: 'negative' | 'positive';
 };
 
 export type PreviewRow = {

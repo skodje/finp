@@ -3,7 +3,7 @@
 import csv
 import io
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal, InvalidOperation
 
 from app.domain.classification import classify, is_transfer
@@ -211,6 +211,47 @@ def read_csv(
             )
         )
     return CsvRead(rows, labels, cols, has_header)
+
+
+def xlsx_to_csv(content: bytes) -> bytes:
+    """Convert the first worksheet of an XLSX workbook to UTF-8 CSV in memory."""
+    try:
+        from openpyxl import load_workbook
+
+        workbook = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    except Exception as exc:
+        raise Invalid(
+            "Kunne ikke lese Excel-filen. Kontroller at det er en gyldig .xlsx-fil."
+        ) from exc
+
+    try:
+        if not workbook.worksheets:
+            raise Invalid("Excel-filen inneholder ingen ark.")
+        worksheet = workbook.worksheets[0]
+        output = io.StringIO(newline="")
+        writer = csv.writer(output)
+
+        def cell_text(value):
+            if value is None:
+                return ""
+            if isinstance(value, datetime):
+                return value.date().isoformat()
+            if isinstance(value, date):
+                return value.isoformat()
+            if isinstance(value, time):
+                return value.isoformat()
+            if isinstance(value, bool):
+                return "TRUE" if value else "FALSE"
+            return str(value)
+
+        for row in worksheet.iter_rows(values_only=True):
+            writer.writerow([cell_text(value) for value in row])
+        converted = output.getvalue().encode("utf-8")
+        if not converted.strip():
+            raise Invalid("Excel-filen er tom.")
+        return converted
+    finally:
+        workbook.close()
 
 
 def parse_csv(content: bytes) -> list[ParsedRow]:

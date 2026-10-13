@@ -120,3 +120,8 @@ frontend/src/
   format.ts      Formatting helpers
   components/    Modals, month bar, grouped transaction list, etc.
 ```
+
+
+### Import av Excel
+
+Importer både CSV og `.xlsx`. For Excel-filer brukes det første regnearket, som konverteres til CSV i minnet før samme kolonne-gjenkjenning, fortegnsnormalisering og forhåndsvisning som for CSV. Maksimal opplastingsstørrelse er 5 MB.

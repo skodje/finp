@@ -20,6 +20,7 @@ export function AccountsModal({
   const [name, setName] = useState('');
   const [type, setType] = useState<Account['type']>('credit_card');
   const [owner, setOwner] = useState('');
+  const [expenseSign, setExpenseSign] = useState<Account['expense_sign']>('negative');
   const [editing, setEditing] = useState<string | null>(null); // account id being edited
   const [savingAccount, setSavingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +35,12 @@ export function AccountsModal({
     setSavingAccount(true);
     setError(null);
     try {
-      const data = { name: name.trim(), type, owner_id: owner || null };
+      const data = {
+        name: name.trim(),
+        type,
+        owner_id: owner || null,
+        expense_sign: expenseSign,
+      };
       onAccountSaved(await (editing ? api.updateAccount(editing, data) : api.createAccount(data)));
       onClose();
     } catch (err) {
@@ -69,6 +75,7 @@ export function AccountsModal({
                   setName(account.name);
                   setType(account.type);
                   setOwner(account.owner_id ?? '');
+                  setExpenseSign(account.expense_sign ?? 'negative');
                 }}
               >
                 Rediger
@@ -107,6 +114,20 @@ export function AccountsModal({
         </label>
 
         <label className="field">
+          <span>Hvordan vises utgifter i CSV-filen?</span>
+          <select
+            id="account-expense-sign"
+            name="accountExpenseSign"
+            value={expenseSign}
+            onChange={(event) => setExpenseSign(event.target.value as Account['expense_sign'])}
+          >
+            <option value="negative">Negative beløp (f.eks. −100,00)</option>
+            <option value="positive">Positive beløp (f.eks. 100,00)</option>
+          </select>
+          <small>Dette er standarden for nye importer fra denne kontoen.</small>
+        </label>
+
+        <label className="field">
           <span>Eier</span>
           <select
             id="account-owner"
@@ -126,7 +147,21 @@ export function AccountsModal({
         {error && <div className="error">{error}</div>}
 
         <div className="modalActions">
-          <button type="button" onClick={onClose}>
+          <button
+            type="button"
+            onClick={() => {
+              if (!editing) {
+                onClose();
+                return;
+              }
+              setEditing(null);
+              setName('');
+              setType('credit_card');
+              setOwner('');
+              setExpenseSign('negative');
+              setError(null);
+            }}
+          >
             Avbryt
           </button>
           <button type="submit" className="primary" disabled={savingAccount}>

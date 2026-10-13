@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.api.schemas import CsvImportRequest, ImportPreviewRead, ImportResultRead, ImportRow
 from app.domain.csv_parsing import ParsedRow
+from app.domain.enums import ExpenseSign
 from app.domain.errors import Invalid
 from app.services import imports as svc
 
@@ -21,15 +22,27 @@ def preview_csv(
     description_col: int | None = Query(None),
     amount_col: int | None = Query(None),
     header: bool | None = Query(None),
+    expense_sign: ExpenseSign | None = Query(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    if not file.filename or not file.filename.lower().endswith(".csv"):
-        raise Invalid("Last opp en CSV-fil.")
+    if not file.filename:
+        raise Invalid("Velg en CSV- eller XLSX-fil.")
+    suffix = file.filename.lower().rsplit(".", 1)[-1] if "." in file.filename else ""
+    if suffix not in {"csv", "xlsx"}:
+        raise Invalid("Last opp en CSV- eller XLSX-fil.")
 
     content = file.file.read(svc.MAX_CSV_BYTES + 1)  # +1 so the service can detect oversize
+    if len(content) > svc.MAX_CSV_BYTES:
+        raise Invalid("Filen er for stor (maks 5 MB).")
+    if suffix == "xlsx":
+        from app.domain.csv_parsing import xlsx_to_csv
+
+        content = xlsx_to_csv(content)
+        if len(content) > svc.MAX_CSV_BYTES:
+            raise Invalid("Excel-filen er for stor etter konvertering (maks 5 MB).")
     mapping = {"date": date_col, "description": description_col, "amount": amount_col}
-    parsed, duplicates = svc.preview_csv(db, account_id, content, mapping, header)
+    parsed, duplicates = svc.preview_csv(db, account_id, content, mapping, header, expense_sign)
     rows = parsed.rows
     errors = sum(1 for r in rows if r.error is not None)
     return ImportPreviewRead(

@@ -40,6 +40,7 @@ export const createAccount = (data: {
   name: string;
   type: Account['type'];
   owner_id: string | null;
+  expense_sign: Account['expense_sign'];
 }) => request<Account>('/accounts', post(data), 'Could not create account');
 
 export const createTransaction = (data: {
@@ -52,6 +53,7 @@ export const createTransaction = (data: {
 export type CsvMapping = {
   mapping?: Partial<Preview['mapping']>;
   header?: boolean;
+  expenseSign?: Account['expense_sign'];
 };
 
 export function previewCsv(accountId: string, file: File, opts: CsvMapping = {}) {
@@ -61,6 +63,7 @@ export function previewCsv(accountId: string, file: File, opts: CsvMapping = {})
   if (description != null) params.set('description_col', String(description));
   if (amount != null) params.set('amount_col', String(amount));
   if (opts.header != null) params.set('header', String(opts.header));
+  if (opts.expenseSign != null) params.set('expense_sign', opts.expenseSign);
   const form = new FormData();
   form.append('file', file);
   return request<Preview>(
@@ -78,7 +81,12 @@ export const updatePerson = (id: string, name: string, common_share: string) =>
 
 export const updateAccount = (
   id: string,
-  data: { name: string; type: Account['type']; owner_id: string | null },
+  data: {
+    name: string;
+    type: Account['type'];
+    owner_id: string | null;
+    expense_sign: Account['expense_sign'];
+  },
 ) => request<Account>(`/accounts/${id}`, patch(data), 'Could not update account');
 
 export const updateTransaction = (

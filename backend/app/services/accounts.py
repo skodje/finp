@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import Account, Person
-from app.domain.enums import AccountType
+from app.domain.enums import AccountType, ExpenseSign
 from app.domain.errors import Invalid, NotFound
 
 
@@ -36,10 +36,16 @@ def require_account(db: Session, account_id: UUID) -> Account:
     return account
 
 
-def create_account(db: Session, name: str, type: AccountType, owner_id: UUID | None) -> Account:
+def create_account(
+    db: Session,
+    name: str,
+    type: AccountType,
+    owner_id: UUID | None,
+    expense_sign: ExpenseSign = ExpenseSign.NEGATIVE,
+) -> Account:
     if owner_id and not db.get(Person, owner_id):
         raise NotFound("Person ikke funnet")
-    account = Account(name=name, type=type, owner_id=owner_id)
+    account = Account(name=name, type=type, owner_id=owner_id, expense_sign=expense_sign)
     db.add(account)
     db.commit()
     db.refresh(account)  # loads .owner lazily for serialization
@@ -58,12 +64,22 @@ def rename_person(db: Session, person_id: UUID, name: str, common_share: Decimal
 
 
 def update_account(
-    db: Session, account_id: UUID, name: str, type: AccountType, owner_id: UUID | None
+    db: Session,
+    account_id: UUID,
+    name: str,
+    type: AccountType,
+    owner_id: UUID | None,
+    expense_sign: ExpenseSign = ExpenseSign.NEGATIVE,
 ) -> Account:
     account = require_account(db, account_id)
     if owner_id and not db.get(Person, owner_id):
         raise NotFound("Person ikke funnet")
-    account.name, account.type, account.owner_id = name, type, owner_id
+    account.name, account.type, account.owner_id, account.expense_sign = (
+        name,
+        type,
+        owner_id,
+        expense_sign,
+    )
     db.commit()
     db.refresh(account)
     return account

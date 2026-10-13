@@ -28,7 +28,7 @@ def list_accounts(db: Session = Depends(get_db)):
 @router.post("/accounts", response_model=AccountRead, status_code=201)
 def create_account(payload: AccountCreate, db: Session = Depends(get_db)):
     return AccountRead.from_account(
-        svc.create_account(db, payload.name, payload.type, payload.owner_id)
+        svc.create_account(db, payload.name, payload.type, payload.owner_id, payload.expense_sign)
     )
 
 
@@ -40,5 +40,7 @@ def rename_person(person_id: UUID, payload: PersonCreate, db: Session = Depends(
 @router.patch("/accounts/{account_id}", response_model=AccountRead)
 def update_account(account_id: UUID, payload: AccountCreate, db: Session = Depends(get_db)):
     return AccountRead.from_account(
-        svc.update_account(db, account_id, payload.name, payload.type, payload.owner_id)
+        svc.update_account(
+            db, account_id, payload.name, payload.type, payload.owner_id, payload.expense_sign
+        )
     )

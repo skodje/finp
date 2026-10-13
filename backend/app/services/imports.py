@@ -1,6 +1,6 @@
 from collections import Counter
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 from uuid import UUID
 
@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Allocation, Category, Merchant, Transaction
 from app.domain.csv_parsing import CsvRead, ParsedRow, read_csv
+from app.domain.enums import ExpenseSign
 from app.domain.errors import Invalid
 from app.services.accounts import require_account
 
@@ -65,12 +66,23 @@ def preview_csv(
     content: bytes,
     mapping: dict[str, int | None] | None = None,
     header: bool | None = None,
+    expense_sign: ExpenseSign | None = None,
 ) -> tuple[CsvRead, set[int]]:
     """Parsed CSV plus the row numbers that are already stored (shown as skipped in the UI)."""
-    require_account(db, account_id)
+    account = require_account(db, account_id)
     if len(content) > MAX_CSV_BYTES:
         raise Invalid("Filen er for stor (maks 5 MB).")
     parsed = read_csv(content, mapping, header)
+    # Normalize source amounts into the app convention: expenses are negative,
+    # refunds/credits are positive. The preview and commit both use these values.
+    source_sign = expense_sign or account.expense_sign
+    if source_sign == ExpenseSign.POSITIVE:
+        parsed = replace(
+            parsed,
+            rows=[
+                replace(row, amount=-row.amount) if not row.error else row for row in parsed.rows
+            ],
+        )
     _, duplicates = _split_duplicates(db, account_id, [r for r in parsed.rows if not r.error])
     return parsed, {r.row_number for r in duplicates}
 

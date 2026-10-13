@@ -34,6 +34,9 @@ export function ImportModal({
   onImported,
 }: Props) {
   const [file, setFile] = useState<File | null>(null);
+  const [expenseSign, setExpenseSign] = useState<Account['expense_sign']>(
+    () => accounts.find((account) => account.id === selectedAccount)?.expense_sign ?? 'negative',
+  );
   const [preview, setPreview] = useState<Preview | null>(null);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +53,8 @@ export function ImportModal({
     }
     setError(null);
     try {
-      setPreview(await api.previewCsv(selectedAccount, file, opts));
+      const effectiveOpts = { ...opts, expenseSign: opts.expenseSign ?? expenseSign };
+      setPreview(await api.previewCsv(selectedAccount, file, effectiveOpts));
       setFile(file);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import preview failed');
@@ -87,8 +91,8 @@ export function ImportModal({
 
   return (
     <Modal
-      title="Importer CSV"
-      subtitle="Velg konto, last opp CSV og kontroller forslagene før import."
+      title="Importer fil"
+      subtitle="Velg konto, last opp CSV eller Excel (.xlsx), og kontroller forslagene før import."
       className="importModal"
       onClose={close}
       closeDisabled={importing}
@@ -101,7 +105,13 @@ export function ImportModal({
               id="import-account"
               name="accountId"
               value={selectedAccount}
-              onChange={(event) => onSelectAccount(event.target.value)}
+              onChange={(event) => {
+                const accountId = event.target.value;
+                onSelectAccount(accountId);
+                setExpenseSign(
+                  accounts.find((account) => account.id === accountId)?.expense_sign ?? 'negative',
+                );
+              }}
             >
               <option value="">Velg konto…</option>
               {accounts.map((account) => (
@@ -117,18 +127,18 @@ export function ImportModal({
             className={`dropzone ${!selectedAccount ? 'disabled' : ''}`}
             onClick={() => selectedAccount && fileInput.current?.click()}
           >
-            <strong>{selectedAccount ? 'Velg CSV-fil' : 'Velg konto først'}</strong>
+            <strong>{selectedAccount ? 'Velg CSV- eller Excel-fil' : 'Velg konto først'}</strong>
             <span>
               {selectedAccount
                 ? 'Dato, beskrivelse og beløp er nødvendig.'
-                : 'Velg kontoen eller kortet CSV-filen kommer fra.'}
+                : 'Velg kontoen eller kortet filen kommer fra.'}
             </span>
             <input
               id="csv-file"
-              name="csvFile"
+              name="importFile"
               ref={fileInput}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               hidden
               onChange={(event) => {
                 const file = event.target.files?.[0];
@@ -146,6 +156,28 @@ export function ImportModal({
         </>
       ) : (
         <>
+          <label className="field">
+            <span>Hvordan vises utgifter i denne CSV-filen?</span>
+            <select
+              value={expenseSign}
+              onChange={(event) => {
+                const next = event.target.value as Account['expense_sign'];
+                setExpenseSign(next);
+                if (file) {
+                  void loadPreview(file, {
+                    header: preview.has_header,
+                    mapping: preview.mapping,
+                    expenseSign: next,
+                  });
+                }
+              }}
+            >
+              <option value="negative">Negative beløp (f.eks. −226,05 kr)</option>
+              <option value="positive">Positive beløp (f.eks. 226,05 kr)</option>
+            </select>
+            <small>Beløpene i forhåndsvisningen normaliseres slik at utgifter er negative.</small>
+          </label>
+
           <div className="importSummary">
             <strong>{preview.valid_rows} nye transaksjoner</strong>
             <span>

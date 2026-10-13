@@ -8,7 +8,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.db.models import Account, Transaction
-from app.domain.enums import AccountType, Ownership
+from app.domain.enums import AccountType, ExpenseSign, Ownership
 
 Name100 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 Name120 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
@@ -119,6 +119,7 @@ class AccountRead(BaseModel):
     type: AccountType
     owner_id: UUID | None = None
     owner: str | None = None
+    expense_sign: ExpenseSign = ExpenseSign.NEGATIVE
 
     @classmethod
     def from_account(cls, account: Account) -> AccountRead:
@@ -128,6 +129,7 @@ class AccountRead(BaseModel):
             type=account.type,
             owner_id=account.owner_id,
             owner=account.owner.name if account.owner else None,
+            expense_sign=account.expense_sign,
         )
 
 
@@ -135,6 +137,7 @@ class AccountCreate(BaseModel):
     name: Name120
     type: AccountType
     owner_id: UUID | None = None
+    expense_sign: ExpenseSign = ExpenseSign.NEGATIVE
 
 
 class ImportRow(BaseModel):

@@ -93,3 +93,27 @@ def test_mapping_overrides_inferred_amount():
     assert read_csv(data).rows[0].amount == Decimal("10000.00")  # wrong guess: balance first
     got = read_csv(data, {"amount": 3})
     assert got.rows[0].amount == Decimal("-99.00") and got.mapping["amount"] == 3
+
+
+def test_xlsx_to_csv_supports_excel_dates_and_numeric_amounts():
+    from io import BytesIO
+
+    from openpyxl import Workbook
+
+    from app.domain.csv_parsing import xlsx_to_csv
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Dato", "Beskrivelse", "Beløp"])
+    sheet.append([date(2026, 9, 22), "MENY CC V ULLERN", 226.05])
+    output = BytesIO()
+    workbook.save(output)
+
+    csv_content = xlsx_to_csv(output.getvalue())
+    rows = read_csv(csv_content)
+
+    assert len(rows.rows) == 1
+    assert rows.rows[0].posted_at == date(2026, 9, 22)
+    assert rows.rows[0].description == "MENY CC V ULLERN"
+    assert rows.rows[0].amount == Decimal("226.05")
+    assert rows.rows[0].error is None

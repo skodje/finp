@@ -91,6 +91,7 @@ export function TransactionEditModal({ tx, people, onClose, onSaved }: Props) {
         <label className="field">
           <span>Beløp</span>
           <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <small>Bruk negative beløp for utgifter og positive beløp for refusjoner og inntekter.</small>
         </label>
         <label className="field">
           <span>Kategori</span>
