@@ -5,7 +5,7 @@ export function SpendChart({ transactions }: { transactions: Tx[] }) {
   const totals = new Map<string, number>();
   for (const tx of transactions) {
     const key = tx.category ?? 'Ukategorisert';
-    totals.set(key, (totals.get(key) ?? 0) - Number(tx.amount));
+    totals.set(key, (totals.get(key) ?? 0) + Number(tx.amount));
   }
   const rows = [...totals].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   const max = rows[0]?.[1] ?? 1;

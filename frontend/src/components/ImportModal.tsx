@@ -38,7 +38,14 @@ export function ImportModal({
     () => accounts.find((account) => account.id === selectedAccount)?.expense_sign ?? 'negative',
   );
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [refreshingPreview, setRefreshingPreview] = useState(false);
   const [importing, setImporting] = useState(false);
+  const importingRef = useRef(false);
+  const previewRef = useRef<Preview | null>(null);
+  const rowEditsRef = useRef(new Map<number, Partial<PreviewRow>>());
+  const previewRequestRef = useRef(0);
+  // Keep a synchronous copy so in-flight preview requests can preserve the latest edits.
+  previewRef.current = preview;
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -48,35 +55,57 @@ export function ImportModal({
 
   async function loadPreview(file: File, opts: api.CsvMapping = {}) {
     if (!selectedAccount) {
-      setError('Velg konto eller kort før du velger CSV-fil.');
+      setError('Velg konto eller kort før du velger fil.');
       return;
     }
+
+    const requestId = ++previewRequestRef.current;
     setError(null);
+    setRefreshingPreview(true);
     try {
       const effectiveOpts = { ...opts, expenseSign: opts.expenseSign ?? expenseSign };
-      setPreview(await api.previewCsv(selectedAccount, file, effectiveOpts));
+      const nextPreview = await api.previewCsv(selectedAccount, file, effectiveOpts);
+
+      // Mapping/sign/header changes re-run parsing. Preserve the user's per-row edits
+      // rather than silently replacing them with the server's fresh suggestions.
+      if (requestId !== previewRequestRef.current) return;
+      nextPreview.rows = nextPreview.rows.map((row) => ({
+        ...row,
+        ...(rowEditsRef.current.get(row.row_number) ?? {}),
+      }));
+      previewRef.current = nextPreview;
+      setPreview(nextPreview);
       setFile(file);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import preview failed');
+      if (requestId === previewRequestRef.current) {
+        setError(err instanceof Error ? err.message : 'Forhåndsvisning av import mislyktes');
+      }
+    } finally {
+      if (requestId === previewRequestRef.current) setRefreshingPreview(false);
     }
   }
 
   function updateRow(rowNumber: number, patch: Partial<PreviewRow>) {
-    setPreview((current) =>
-      current
-        ? {
-            ...current,
-            rows: current.rows.map((row) =>
-              row.row_number === rowNumber ? { ...row, ...patch } : row,
-            ),
-          }
-        : current,
-    );
+    const current = previewRef.current;
+    if (!current) return;
+    rowEditsRef.current.set(rowNumber, {
+      ...(rowEditsRef.current.get(rowNumber) ?? {}),
+      ...patch,
+    });
+    const next = {
+      ...current,
+      rows: current.rows.map((row) =>
+        row.row_number === rowNumber ? { ...row, ...patch } : row,
+      ),
+    };
+    previewRef.current = next;
+    setPreview(next);
   }
 
   async function confirm() {
-    if (!preview || !selectedAccount) return;
+    if (!preview || !selectedAccount || importingRef.current || refreshingPreview) return;
 
+    importingRef.current = true;
     setImporting(true);
     setError(null);
     try {
@@ -85,6 +114,7 @@ export function ImportModal({
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import failed');
+      importingRef.current = false;
       setImporting(false);
     }
   }
@@ -228,6 +258,12 @@ export function ImportModal({
             </details>
           )}
 
+          {refreshingPreview && (
+            <p className="muted" role="status">
+              Oppdaterer forhåndsvisning – endringene dine beholdes.
+            </p>
+          )}
+
           <div className="previewTable">
             {preview.rows.slice(0, PREVIEW_LIMIT).map((row) => (
               <div
@@ -283,16 +319,27 @@ export function ImportModal({
           )}
 
           <div className="modalActions">
-            <button type="button" onClick={() => setPreview(null)} disabled={importing}>
+            <button
+              type="button"
+              onClick={() => {
+                ++previewRequestRef.current;
+                previewRef.current = null;
+                rowEditsRef.current.clear();
+                setPreview(null);
+                setFile(null);
+                setError(null);
+              }}
+              disabled={importing}
+            >
               Velg annen fil
             </button>
             <button
               type="button"
               className="primary"
               onClick={confirm}
-              disabled={importing || preview.valid_rows === 0}
+              disabled={importing || refreshingPreview || preview.valid_rows === 0}
             >
-              {importing ? 'Importerer…' : `Importer ${preview.valid_rows} transaksjoner`}
+              {importing ? 'Importerer…' : `Bekreft import av ${preview.valid_rows} transaksjoner`}
             </button>
           </div>
         </>
