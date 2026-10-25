@@ -2,6 +2,10 @@ import type { Account, ImportResult, Person, Preview, PreviewRow, Settlement, Tx
 
 export const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api';
 
+export function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 // FastAPI sends `detail` as a string for our errors and as a list of {msg} for validation errors.
 function detailMessage(body: any, fallback: string): string {
   const detail = body?.detail;

@@ -36,7 +36,7 @@ export function SettlementCard({ settlement, history, month, onSelectMonth, onCh
         onChange(await api.getSettlement(month));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Feil');
+      setError(api.errorMessage(err, 'Feil'));
     }
   }
 
@@ -73,7 +73,12 @@ export function SettlementCard({ settlement, history, month, onSelectMonth, onCh
         <details className="history">
           <summary>Historikk</summary>
           {history.map((h) => (
-            <button type="button" className="historyRow" key={h.month} onClick={() => onSelectMonth(h.month)}>
+            <button
+              type="button"
+              className="historyRow"
+              key={h.month}
+              onClick={() => onSelectMonth(h.month)}
+            >
               <span>{monthLabel(h.month)}</span>
               <small>
                 {h.payments.length

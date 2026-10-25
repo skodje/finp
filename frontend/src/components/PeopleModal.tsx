@@ -16,6 +16,13 @@ export function PeopleModal({ people, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function resetForm() {
+    setEditing(null);
+    setName('');
+    setShare('1');
+    setError(null);
+  }
+
   async function save(event: FormEvent) {
     event.preventDefault();
     const trimmed = name.trim();
@@ -23,14 +30,14 @@ export function PeopleModal({ people, onClose, onSaved }: Props) {
     setSaving(true);
     setError(null);
     try {
-      onSaved(await (editing
+      onSaved(
+        await (editing
           ? api.updatePerson(editing, trimmed, share)
-          : api.createPerson(trimmed, share)));
-      setName('');
-      setShare('1');
-      setEditing(null);
+          : api.createPerson(trimmed, share)),
+      );
+      resetForm();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save person');
+      setError(api.errorMessage(err, 'Could not save person'));
     } finally {
       setSaving(false);
     }
@@ -75,14 +82,7 @@ export function PeopleModal({ people, onClose, onSaved }: Props) {
         </button>
       </form>
       {editing && (
-        <button
-          type="button"
-          onClick={() => {
-            setEditing(null);
-            setName('');
-            setShare('1');
-          }}
-        >
+        <button type="button" onClick={resetForm}>
           Avbryt redigering
         </button>
       )}

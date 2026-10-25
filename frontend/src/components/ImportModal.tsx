@@ -1,21 +1,10 @@
 import { useRef, useState } from 'react';
 import * as api from '../api';
-import { money } from '../format';
 import type { Account, Preview, PreviewRow } from '../types';
+import { AccountField } from './AccountField';
+import { ImportColumnMapper } from './ImportColumnMapper';
+import { ImportPreviewRow } from './ImportPreviewRow';
 import { Modal } from './Modal';
-
-const CATEGORIES = [
-  'Mat',
-  'Barn',
-  'Bil',
-  'Hus',
-  'Transport',
-  'Fritid',
-  'Helse',
-  'Restaurant',
-  'Streaming',
-  'Annet',
-];
 
 const PREVIEW_LIMIT = 100;
 
@@ -82,7 +71,7 @@ export function ImportModal({
       if (nextPreview.error_rows > 0) setColumnsOpen(true);
     } catch (err) {
       if (requestId === previewRequestRef.current) {
-        setError(err instanceof Error ? err.message : 'Forhåndsvisning av import mislyktes');
+        setError(api.errorMessage(err, 'Forhåndsvisning av import mislyktes'));
       }
     } finally {
       if (requestId === previewRequestRef.current) setRefreshingPreview(false);
@@ -115,7 +104,7 @@ export function ImportModal({
       onImported();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import failed');
+      setError(api.errorMessage(err, 'Import failed'));
       importingRef.current = false;
       setImporting(false);
     }
@@ -131,29 +120,18 @@ export function ImportModal({
     >
       {!preview ? (
         <>
-          <label className="field">
-            <span>Konto eller kredittkort</span>
-            <select
-              id="import-account"
-              name="accountId"
-              value={selectedAccount}
-              onChange={(event) => {
-                const accountId = event.target.value;
-                onSelectAccount(accountId);
-                setExpenseSign(
-                  accounts.find((account) => account.id === accountId)?.expense_sign ?? 'negative',
-                );
-              }}
-            >
-              <option value="">Velg konto…</option>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                  {account.owner ? ` · ${account.owner}` : ' · Felles'}
-                </option>
-              ))}
-            </select>
-          </label>
+          <AccountField
+            id="import-account"
+            name="accountId"
+            accounts={accounts}
+            value={selectedAccount}
+            onChange={(accountId) => {
+              onSelectAccount(accountId);
+              setExpenseSign(
+                accounts.find((account) => account.id === accountId)?.expense_sign ?? 'negative',
+              );
+            }}
+          />
 
           <div
             className={`dropzone ${!selectedAccount ? 'disabled' : ''}`}
@@ -219,52 +197,14 @@ export function ImportModal({
           </div>
 
           {file && (
-            <details
-              className="columnMap"
+            <ImportColumnMapper
+              columns={preview.columns}
+              mapping={preview.mapping}
+              hasHeader={preview.has_header}
               open={columnsOpen}
-              onToggle={(event) => setColumnsOpen(event.currentTarget.open)}
-            >
-              <summary>Kolonner</summary>
-              {(['date', 'description', 'amount'] as const).map((field) => (
-                <label className="field" key={field}>
-                  <span>
-                    {{ date: 'Dato', description: 'Beskrivelse', amount: 'Beløp' }[field]}
-                  </span>
-                  <select
-                    value={preview.mapping[field] ?? ''}
-                    onChange={(event) =>
-                      void loadPreview(file, {
-                        header: preview.has_header,
-                        mapping: { ...preview.mapping, [field]: Number(event.target.value) },
-                      })
-                    }
-                  >
-                    {preview.mapping[field] == null && <option value="">Velg kolonne…</option>}
-                    {preview.columns.map((label, index) => (
-                      <option key={index} value={index}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-              <label className="checkField">
-                <input
-                  type="checkbox"
-                  checked={preview.has_header}
-                  onChange={(event) =>
-                    void loadPreview(file, {
-                      header: event.target.checked,
-                      mapping: preview.mapping,
-                    })
-                  }
-                />
-                <span>
-                  <strong>Første rad er overskrift</strong>
-                  <small>Slå av hvis første rad er en transaksjon.</small>
-                </span>
-              </label>
-            </details>
+              onToggle={setColumnsOpen}
+              onChange={(opts) => void loadPreview(file, opts)}
+            />
           )}
 
           {refreshingPreview && (
@@ -275,51 +215,7 @@ export function ImportModal({
 
           <div className="previewTable">
             {preview.rows.slice(0, PREVIEW_LIMIT).map((row) => (
-              <div
-                className={`previewRow ${row.error ? 'bad' : ''} ${
-                  row.duplicate ? 'dup' : ''
-                } ${!row.ownership && !row.is_transfer ? 'unresolved' : ''}`}
-                key={row.row_number}
-              >
-                <span>{row.posted_at}</span>
-                <strong>{row.merchant || row.description}</strong>
-                <span>{money(row.amount)}</span>
-
-                <select
-                  id={`ownership-${row.row_number}`}
-                  name={`ownership-${row.row_number}`}
-                  value={row.ownership ?? ''}
-                  onChange={(event) =>
-                    updateRow(row.row_number, {
-                      ownership: event.target.value || null,
-                      confidence: event.target.value ? '1.0000' : null,
-                    })
-                  }
-                >
-                  <option value="">Uavklart</option>
-                  <option value="common">Felles</option>
-                  <option value="private">Privat</option>
-                </select>
-
-                <select
-                  id={`category-${row.row_number}`}
-                  name={`category-${row.row_number}`}
-                  value={row.category ?? ''}
-                  onChange={(event) =>
-                    updateRow(row.row_number, { category: event.target.value || null })
-                  }
-                >
-                  <option value="">Kategori</option>
-                  {CATEGORIES.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-
-                {row.error && <span className="rowError">{row.error}</span>}
-                {row.duplicate && <span className="rowNote">Finnes fra før – hoppes over</span>}
-              </div>
+              <ImportPreviewRow key={row.row_number} row={row} onChange={updateRow} />
             ))}
           </div>
 

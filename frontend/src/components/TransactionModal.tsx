@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import * as api from '../api';
+import { normalizeAmount, parseAmount } from '../format';
 import type { Account, Tx } from '../types';
+import { AccountField } from './AccountField';
 import { Modal } from './Modal';
 
 type Props = {
@@ -26,11 +28,10 @@ export function TransactionModal({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    // Accept Norwegian decimal comma; the API expects a dot.
-    const normalized = amount.trim().replace(/\s/g, '').replace(',', '.');
+    const normalized = normalizeAmount(amount);
     if (!selectedAccount) return setError('Velg konto eller kort.');
     if (!description.trim()) return setError('Skriv inn en beskrivelse.');
-    if (!normalized || !Number.isFinite(Number(normalized))) return setError('Ugyldig beløp.');
+    if (parseAmount(amount) === null) return setError('Ugyldig beløp.');
 
     setSaving(true);
     setError(null);
@@ -45,7 +46,7 @@ export function TransactionModal({
       );
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create transaction');
+      setError(api.errorMessage(err, 'Could not create transaction'));
       setSaving(false);
     }
   }
@@ -58,23 +59,13 @@ export function TransactionModal({
       closeDisabled={saving}
     >
       <form className="accountForm" onSubmit={submit}>
-        <label className="field">
-          <span>Konto eller kredittkort</span>
-          <select
-            id="tx-account"
-            name="accountId"
-            value={selectedAccount}
-            onChange={(event) => onSelectAccount(event.target.value)}
-          >
-            <option value="">Velg konto…</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-                {account.owner ? ` · ${account.owner}` : ' · Felles'}
-              </option>
-            ))}
-          </select>
-        </label>
+        <AccountField
+          id="tx-account"
+          name="accountId"
+          accounts={accounts}
+          value={selectedAccount}
+          onChange={onSelectAccount}
+        />
 
         <label className="field">
           <span>Dato</span>

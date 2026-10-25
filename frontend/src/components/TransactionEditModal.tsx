@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import * as api from '../api';
-import { money } from '../format';
+import { normalizeAmount, parseAmount } from '../format';
 import type { Person, Tx } from '../types';
 import { Modal } from './Modal';
+import { SplitEditor } from './SplitEditor';
 
 type Props = {
   tx: Tx;
@@ -55,12 +56,11 @@ export function TransactionEditModal({ tx, people, onClose, onSaved, onDeleted }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const parsedAmount = Number(amount.trim().replace(/\s/g, '').replace(',', '.'));
-  const absoluteAmount = Number.isFinite(parsedAmount) ? Math.abs(parsedAmount) : 0;
+  const parsedAmount = parseAmount(amount);
+  const absoluteAmount = parsedAmount === null ? 0 : Math.abs(parsedAmount);
   const sharesValid = people.every((p) => Number.isFinite(Number(shares[p.id] || 0)));
   const shareTotal = people.reduce((total, p) => total + Number(shares[p.id] || 0), 0);
   const customSplit = ownership === 'common' && splitBetweenPeople;
-  const shareAmount = (id: string) => (absoluteAmount * Number(shares[id] || 0)) / 100;
 
   function updateShare(personId: string, raw: string) {
     const value = raw.replace(',', '.');
@@ -81,9 +81,9 @@ export function TransactionEditModal({ tx, people, onClose, onSaved, onDeleted }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const normalized = amount.trim().replace(/\s/g, '').replace(',', '.');
+    const normalized = normalizeAmount(amount);
     if (!description.trim()) return setError('Skriv inn en beskrivelse.');
-    if (!normalized || !Number.isFinite(Number(normalized))) return setError('Ugyldig beløp.');
+    if (parseAmount(amount) === null) return setError('Ugyldig beløp.');
 
     if (customSplit && (!sharesValid || Math.abs(shareTotal - 100) > 0.001))
       return setError(
@@ -118,7 +118,7 @@ export function TransactionEditModal({ tx, people, onClose, onSaved, onDeleted }
       );
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not update transaction');
+      setError(api.errorMessage(err, 'Could not update transaction'));
       setSaving(false);
     }
   }
@@ -132,7 +132,7 @@ export function TransactionEditModal({ tx, people, onClose, onSaved, onDeleted }
       onDeleted(tx.id);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete transaction');
+      setError(api.errorMessage(err, 'Could not delete transaction'));
       setSaving(false);
     }
   }
@@ -196,32 +196,14 @@ export function TransactionEditModal({ tx, people, onClose, onSaved, onDeleted }
               <span>Juster fordelingen mellom personer</span>
             </label>
             {splitBetweenPeople && (
-              <div className="splitEditor">
-                <small className="muted">
-                  Kontoen betaler hele beløpet. Fordelingen bestemmer hvor mye hver person dekker i
-                  oppgjøret.
-                </small>
-                {people.map((p) => (
-                  <label className="splitRow" key={p.id}>
-                    <span>{p.name}</span>
-                    <input
-                      inputMode="decimal"
-                      aria-label={`${p.name} prosent`}
-                      value={shares[p.id]}
-                      onChange={(e) => updateShare(p.id, e.target.value)}
-                    />
-                    <span className="splitPercent">%</span>
-                    <b>{money(shareAmount(p.id))}</b>
-                  </label>
-                ))}
-                <div
-                  className={`splitTotal${
-                    !sharesValid || Math.abs(shareTotal - 100) > 0.001 ? ' invalid' : ''
-                  }`}
-                >
-                  {sharesValid ? `Sum: ${Number(shareTotal.toFixed(2))} %` : 'Sum: ugyldig'}
-                </div>
-              </div>
+              <SplitEditor
+                people={people}
+                shares={shares}
+                amount={absoluteAmount}
+                sharesValid={sharesValid}
+                shareTotal={shareTotal}
+                onChange={updateShare}
+              />
             )}
           </>
         )}

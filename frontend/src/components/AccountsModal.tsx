@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import * as api from '../api';
-import { accountTypeLabel } from '../format';
+import { accountTypeLabel, ownerLabel } from '../format';
 import type { Account, Person } from '../types';
 import { Modal } from './Modal';
 
@@ -11,12 +11,7 @@ type Props = {
   onAccountSaved: (account: Account) => void;
 };
 
-export function AccountsModal({
-  accounts,
-  people,
-  onClose,
-  onAccountSaved,
-}: Props) {
+export function AccountsModal({ accounts, people, onClose, onAccountSaved }: Props) {
   const [name, setName] = useState('');
   const [type, setType] = useState<Account['type']>('credit_card');
   const [owner, setOwner] = useState('');
@@ -24,6 +19,15 @@ export function AccountsModal({
   const [editing, setEditing] = useState<string | null>(null); // account id being edited
   const [savingAccount, setSavingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function resetForm() {
+    setEditing(null);
+    setName('');
+    setType('credit_card');
+    setOwner('');
+    setExpenseSign('negative');
+    setError(null);
+  }
 
   async function addAccount(event: FormEvent) {
     event.preventDefault();
@@ -44,7 +48,7 @@ export function AccountsModal({
       onAccountSaved(await (editing ? api.updateAccount(editing, data) : api.createAccount(data)));
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save account');
+      setError(api.errorMessage(err, 'Could not save account'));
       setSavingAccount(false);
     }
   }
@@ -65,7 +69,7 @@ export function AccountsModal({
                 <strong>{account.name}</strong>
                 <span>
                   {accountTypeLabel(account.type)}
-                  {account.owner ? ` · ${account.owner}` : ' · Felles'}
+                  {ownerLabel(account.owner)}
                 </span>
               </div>
               <button
@@ -154,12 +158,7 @@ export function AccountsModal({
                 onClose();
                 return;
               }
-              setEditing(null);
-              setName('');
-              setType('credit_card');
-              setOwner('');
-              setExpenseSign('negative');
-              setError(null);
+              resetForm();
             }}
           >
             Avbryt

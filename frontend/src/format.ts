@@ -19,6 +19,26 @@ export function accountTypeLabel(type: Account['type']) {
   return type === 'credit_card' ? 'Kredittkort' : 'Bankkonto';
 }
 
+export function ownerLabel(owner: string | null) {
+  return owner ? ` · ${owner}` : ' · Felles';
+}
+
+export function accountOptionLabel(account: Account) {
+  return `${account.name}${ownerLabel(account.owner)}`;
+}
+
 export function needsReview(confidence: string | null) {
   return Number(confidence ?? 1) < 0.8;
+}
+
+// Accept Norwegian decimal comma and stray spaces; the API expects a dot.
+export function normalizeAmount(value: string) {
+  return value.trim().replace(/\s/g, '').replace(',', '.');
+}
+
+export function parseAmount(value: string): number | null {
+  const normalized = normalizeAmount(value);
+  if (!normalized) return null;
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? amount : null;
 }

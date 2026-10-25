@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { API } from '../api';
 import { money } from '../format';
+import { groupByCategory, splitLabel } from '../transactions';
 import type { Tx } from '../types';
 
 type Props = {
@@ -18,31 +19,14 @@ const FILTERS = [
   ['common', 'Felles'],
 ];
 
-const UNCATEGORIZED = 'Ukategorisert';
-
-function groupByCategory(transactions: Tx[]) {
-  const groups = new Map<string, { items: Tx[]; total: number }>();
-  for (const tx of transactions) {
-    const key = tx.is_transfer ? 'Overføringer' : (tx.category ?? UNCATEGORIZED);
-    const group = groups.get(key) ?? { items: [], total: 0 };
-    group.items.push(tx);
-    group.total += Number(tx.amount);
-    groups.set(key, group);
-  }
-  // biggest spend first
-  return [...groups.entries()].sort((a, b) => b[1].total - a[1].total);
-}
-
-function splitLabel(transaction: Tx) {
-  if (transaction.ownership !== 'split' || transaction.splits.length === 0) return null;
-  return `delt ${transaction.splits.map((s) => Number(s.percentage)).join('/')}`;
-}
-
 function TransactionRow({ transaction, onEdit }: { transaction: Tx; onEdit: (tx: Tx) => void }) {
   const split = splitLabel(transaction);
   return (
-    <div className={`row${transaction.is_transfer ? ' transfer' : ''}`}
-      onClick={() => onEdit(transaction)} style={{ cursor: 'pointer' }}>
+    <div
+      className={`row${transaction.is_transfer ? ' transfer' : ''}`}
+      onClick={() => onEdit(transaction)}
+      style={{ cursor: 'pointer' }}
+    >
       <div>
         <strong>{transaction.merchant ?? transaction.description}</strong>
         <small>
@@ -56,7 +40,14 @@ function TransactionRow({ transaction, onEdit }: { transaction: Tx; onEdit: (tx:
   );
 }
 
-export function TransactionList({ transactions, loading, error, filter, onFilterChange, onEdit }: Props) {
+export function TransactionList({
+  transactions,
+  loading,
+  error,
+  filter,
+  onFilterChange,
+  onEdit,
+}: Props) {
   const [grouped, setGrouped] = useState(true);
 
   return (

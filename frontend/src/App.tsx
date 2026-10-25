@@ -11,6 +11,7 @@ import { TransactionModal } from './components/TransactionModal';
 import { money, monthKey, monthLabel, needsReview } from './format';
 import { SettlementCard } from './components/SettlementCard';
 import { SpendChart } from './components/SpendChart';
+import { isCommon, spent } from './transactions';
 import type { Account, Person, Settlement, Tx } from './types';
 
 const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
@@ -41,7 +42,7 @@ export function App() {
     api
       .getTransactions()
       .then(setTransactions)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Unknown error'))
+      .catch((err) => setError(api.errorMessage(err, 'Unknown error')))
       .finally(() => setLoading(false));
   }
 
@@ -73,7 +74,6 @@ export function App() {
   }, [currentMonth, transactions]);
 
   // A custom split is still a common expense, just with a different distribution.
-  const isCommon = (tx: Tx) => tx.ownership === 'common' || tx.ownership === 'split';
   const visible = allMonthTransactions.filter(
     (tx) =>
       filter === 'all' ||
@@ -81,8 +81,6 @@ export function App() {
       (filter === 'common' && isCommon(tx)),
   );
 
-  // amounts are stored with expenses negative, so negate to show money spent as positive
-  const spent = (txs: Tx[]) => txs.reduce((total, tx) => total - Number(tx.amount), 0);
   const total = spent(monthTransactions);
   const commonTotal = spent(monthTransactions.filter(isCommon));
   const reviewCount = monthTransactions.filter((tx) => needsReview(tx.confidence)).length;

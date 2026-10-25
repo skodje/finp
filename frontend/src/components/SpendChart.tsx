@@ -1,10 +1,11 @@
 import { money } from '../format';
+import { UNCATEGORIZED } from '../transactions';
 import type { Tx } from '../types';
 
 export function SpendChart({ transactions }: { transactions: Tx[] }) {
   const totals = new Map<string, number>();
   for (const tx of transactions) {
-    const key = tx.category ?? 'Ukategorisert';
+    const key = tx.category ?? UNCATEGORIZED;
     totals.set(key, (totals.get(key) ?? 0) - Number(tx.amount));
   }
   const rows = [...totals].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
