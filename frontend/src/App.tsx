@@ -72,17 +72,19 @@ export function App() {
       .catch((err) => console.error('Failed to load settlement:', err));
   }, [currentMonth, transactions]);
 
+  // A custom split is still a common expense, just with a different distribution.
+  const isCommon = (tx: Tx) => tx.ownership === 'common' || tx.ownership === 'split';
   const visible = allMonthTransactions.filter(
     (tx) =>
       filter === 'all' ||
       (filter === 'review' && needsReview(tx.confidence)) ||
-      (filter === 'common' && tx.ownership === 'common'),
+      (filter === 'common' && isCommon(tx)),
   );
 
   // amounts are stored with expenses negative, so negate to show money spent as positive
   const spent = (txs: Tx[]) => txs.reduce((total, tx) => total - Number(tx.amount), 0);
   const total = spent(monthTransactions);
-  const commonTotal = spent(monthTransactions.filter((tx) => tx.ownership === 'common'));
+  const commonTotal = spent(monthTransactions.filter(isCommon));
   const reviewCount = monthTransactions.filter((tx) => needsReview(tx.confidence)).length;
 
   function preselectOnlyAccount() {

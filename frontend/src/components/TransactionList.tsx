@@ -33,7 +33,13 @@ function groupByCategory(transactions: Tx[]) {
   return [...groups.entries()].sort((a, b) => b[1].total - a[1].total);
 }
 
+function splitLabel(transaction: Tx) {
+  if (transaction.ownership !== 'split' || transaction.splits.length === 0) return null;
+  return `delt ${transaction.splits.map((s) => Number(s.percentage)).join('/')}`;
+}
+
 function TransactionRow({ transaction, onEdit }: { transaction: Tx; onEdit: (tx: Tx) => void }) {
+  const split = splitLabel(transaction);
   return (
     <div className={`row${transaction.is_transfer ? ' transfer' : ''}`}
       onClick={() => onEdit(transaction)} style={{ cursor: 'pointer' }}>
@@ -44,6 +50,7 @@ function TransactionRow({ transaction, onEdit }: { transaction: Tx; onEdit: (tx:
           {transaction.owner ? ` · ${transaction.owner}` : ''}
         </small>
       </div>
+      {split && <span className="pill splitPill">{split}</span>}
       <b>{money(transaction.amount)}</b>
     </div>
   );
