@@ -44,10 +44,6 @@ function TransactionRow({ transaction, onEdit }: { transaction: Tx; onEdit: (tx:
           {transaction.owner ? ` · ${transaction.owner}` : ''}
         </small>
       </div>
-      <span className="pill">
-        {transaction.ownership === 'split' ? 'Delt' : (transaction.ownership ?? 'Uavklart')} ·{' '}
-        {transaction.confidence ? Math.round(Number(transaction.confidence) * 100) : 0}%
-      </span>
       <b>{money(transaction.amount)}</b>
     </div>
   );

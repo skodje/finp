@@ -9,6 +9,7 @@ from decimal import Decimal, InvalidOperation
 from openpyxl import load_workbook
 
 from app.domain.classification import classify, is_transfer
+from app.domain.dates import infer_date_format, parse_date
 from app.domain.enums import Ownership
 from app.domain.errors import Invalid
 
@@ -46,18 +47,9 @@ class CsvRead:
     has_header: bool
 
 
-def parse_date(value: str) -> date:
-    value = value.strip()
-    for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y", "%m/%d/%Y"):
-        try:
-            return datetime.strptime(value, fmt).date()
-        except ValueError:
-            pass
-    raise ValueError(f"Ugyldig dato: {value}")
-
-
 def parse_amount(value: str) -> Decimal:
-    value = value.strip().replace(" ", "").replace(" ", "")
+    value = value.strip().replace("−", "-").replace("–", "-")
+    value = value.replace(" ", "").replace("\u00a0", "")
     if not value:
         raise ValueError("Beløp mangler")
     if "," in value and "." in value:
@@ -138,6 +130,7 @@ def _parse_row(
     raw: list[str],
     cols: dict[str, int | None],
     currency_col: int | None,
+    date_format: str | None = None,
 ) -> ParsedRow:
     def cell(index: int | None) -> str:
         return raw[index].strip() if index is not None and index < len(raw) else ""
@@ -146,7 +139,7 @@ def _parse_row(
     currency = cell(currency_col) or "NOK"
     error = None
     try:
-        posted_at = parse_date(cell(cols["date"]))
+        posted_at = parse_date(cell(cols["date"]), date_format)
         amount = parse_amount(cell(cols["amount"]))
         if not description:
             raise ValueError("Beskrivelse mangler")
@@ -207,8 +200,17 @@ def read_csv(
         return (v or f"Kolonne {i + 1}") if has_header else f"Kolonne {i + 1}: {v}"
 
     currency_col = by_name(CURRENCY_NAMES)
+    date_col = cols.get("date")
+    date_format = (
+        infer_date_format([raw[date_col] for raw in body if date_col < len(raw)])
+        if date_col is not None
+        else None
+    )
     start = 2 if has_header else 1
-    rows = [_parse_row(n, raw, cols, currency_col) for n, raw in enumerate(body, start=start)]
+    rows = [
+        _parse_row(n, raw, cols, currency_col, date_format)
+        for n, raw in enumerate(body, start=start)
+    ]
     return CsvRead(rows, [label(i) for i in range(width)], cols, has_header)
 
 

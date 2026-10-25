@@ -79,9 +79,10 @@ export function App() {
       (filter === 'common' && tx.ownership === 'common'),
   );
 
-  const sum = (txs: Tx[]) => txs.reduce((total, tx) => total + Number(tx.amount), 0);
-  const total = sum(monthTransactions);
-  const commonTotal = sum(monthTransactions.filter((tx) => tx.ownership === 'common'));
+  // amounts are stored with expenses negative, so negate to show money spent as positive
+  const spent = (txs: Tx[]) => txs.reduce((total, tx) => total - Number(tx.amount), 0);
+  const total = spent(monthTransactions);
+  const commonTotal = spent(monthTransactions.filter((tx) => tx.ownership === 'common'));
   const reviewCount = monthTransactions.filter((tx) => needsReview(tx.confidence)).length;
 
   function preselectOnlyAccount() {

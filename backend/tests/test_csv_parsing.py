@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from app.domain.csv_parsing import parse_amount, parse_csv, parse_date, read_csv
+from app.domain.csv_parsing import parse_amount, parse_csv, read_csv
 from app.domain.enums import Ownership
 from app.domain.errors import Invalid
 
@@ -15,7 +15,8 @@ from app.domain.errors import Invalid
         ("1.234,56", "1234.56"),
         ("1,234.56", "1234.56"),
         ("-99,5", "-99.5"),
-        ("1 234", "1234"),
+        ("−99,5", "-99.5"),
+        ("1 234", "1234"),
     ],
 )
 def test_parse_amount(raw, expected):
@@ -28,11 +29,52 @@ def test_parse_amount_rejects(raw):
         parse_amount(raw)
 
 
-def test_parse_date_formats():
-    assert parse_date("2025-03-04") == date(2025, 3, 4)
-    assert parse_date("04.03.2025") == date(2025, 3, 4)
-    with pytest.raises(ValueError):
-        parse_date("i går")
+def test_month_first_dates_are_inferred():
+    rows = parse_csv(
+        b"Dato,Beskrivelse,Belop\n"
+        b"10/08/2026,KIWI,10\n"
+        b"10/07/2026,KIWI,10\n"
+        b"10/06/2026,KIWI,10\n"
+        b"09/30/2026,KIWI,10\n"
+    )
+    assert [r.posted_at for r in rows] == [
+        date(2026, 10, 8),
+        date(2026, 10, 7),
+        date(2026, 10, 6),
+        date(2026, 9, 30),
+    ]
+
+
+def test_ambiguous_day_month_order_follows_statement_order():
+    rows = parse_csv(
+        b"Dato;Beskrivelse;Belop\n"
+        b"10/08/2026;KIWI;10\n"
+        b"10/07/2026;KIWI;10\n"
+        b"10/06/2026;KIWI;10\n"
+        b"10/05/2026;KIWI;10\n"
+    )
+    assert [r.posted_at for r in rows] == [
+        date(2026, 10, 8),
+        date(2026, 10, 7),
+        date(2026, 10, 6),
+        date(2026, 10, 5),
+    ]
+
+
+def test_day_first_dates_are_inferred():
+    rows = parse_csv(
+        b"Dato;Beskrivelse;Belop\n"
+        b"05.10.2026;KIWI;10\n"
+        b"04.10.2026;KIWI;10\n"
+        b"03.10.2026;KIWI;10\n"
+        b"02.10.2026;KIWI;10\n"
+    )
+    assert [r.posted_at for r in rows] == [
+        date(2026, 10, 5),
+        date(2026, 10, 4),
+        date(2026, 10, 3),
+        date(2026, 10, 2),
+    ]
 
 
 def test_parse_csv_semicolon_norwegian_headers_and_classification():
