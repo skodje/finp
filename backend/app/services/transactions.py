@@ -59,6 +59,12 @@ def create_transaction(
     return load_transaction(db, tx.id)
 
 
+def delete_transaction(db: Session, transaction_id: UUID) -> None:
+    tx = load_transaction(db, transaction_id)
+    db.delete(tx)
+    db.commit()
+
+
 def update_classification(
     db: Session,
     transaction_id: UUID,

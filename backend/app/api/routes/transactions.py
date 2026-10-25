@@ -46,6 +46,11 @@ def update_transaction(
     )
 
 
+@router.delete("/transactions/{transaction_id}", status_code=204)
+def delete_transaction(transaction_id: UUID, db: Session = Depends(get_db)):
+    svc.delete_transaction(db, transaction_id)
+
+
 @router.get("/settlement", response_model=Settlement)
 def settlement(month: str, db: Session = Depends(get_db)):
     return settle_svc.get_settlement(db, month)

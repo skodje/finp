@@ -13,6 +13,7 @@ const CATEGORIES = [
   'Fritid',
   'Helse',
   'Restaurant',
+  'Streaming',
   'Annet',
 ];
 
@@ -38,6 +39,7 @@ export function ImportModal({
     () => accounts.find((account) => account.id === selectedAccount)?.expense_sign ?? 'negative',
   );
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [columnsOpen, setColumnsOpen] = useState(false);
   const [refreshingPreview, setRefreshingPreview] = useState(false);
   const [importing, setImporting] = useState(false);
   const importingRef = useRef(false);
@@ -76,6 +78,8 @@ export function ImportModal({
       previewRef.current = nextPreview;
       setPreview(nextPreview);
       setFile(file);
+      // Open automatically when something needs attention, but never close it for the user.
+      if (nextPreview.error_rows > 0) setColumnsOpen(true);
     } catch (err) {
       if (requestId === previewRequestRef.current) {
         setError(err instanceof Error ? err.message : 'Forhåndsvisning av import mislyktes');
@@ -94,9 +98,7 @@ export function ImportModal({
     });
     const next = {
       ...current,
-      rows: current.rows.map((row) =>
-        row.row_number === rowNumber ? { ...row, ...patch } : row,
-      ),
+      rows: current.rows.map((row) => (row.row_number === rowNumber ? { ...row, ...patch } : row)),
     };
     previewRef.current = next;
     setPreview(next);
@@ -217,11 +219,17 @@ export function ImportModal({
           </div>
 
           {file && (
-            <details className="columnMap" open={preview.error_rows > 0}>
+            <details
+              className="columnMap"
+              open={columnsOpen}
+              onToggle={(event) => setColumnsOpen(event.currentTarget.open)}
+            >
               <summary>Kolonner</summary>
               {(['date', 'description', 'amount'] as const).map((field) => (
                 <label className="field" key={field}>
-                  <span>{{ date: 'Dato', description: 'Beskrivelse', amount: 'Beløp' }[field]}</span>
+                  <span>
+                    {{ date: 'Dato', description: 'Beskrivelse', amount: 'Beløp' }[field]}
+                  </span>
                   <select
                     value={preview.mapping[field] ?? ''}
                     onChange={(event) =>
@@ -240,19 +248,20 @@ export function ImportModal({
                   </select>
                 </label>
               ))}
-              <label className="field">
+              <label className="checkField">
+                <input
+                  type="checkbox"
+                  checked={preview.has_header}
+                  onChange={(event) =>
+                    void loadPreview(file, {
+                      header: event.target.checked,
+                      mapping: preview.mapping,
+                    })
+                  }
+                />
                 <span>
-                  <input
-                    type="checkbox"
-                    checked={preview.has_header}
-                    onChange={(event) =>
-                      void loadPreview(file, {
-                        header: event.target.checked,
-                        mapping: preview.mapping,
-                      })
-                    }
-                  />{' '}
-                  Første rad er overskrift
+                  <strong>Første rad er overskrift</strong>
+                  <small>Slå av hvis første rad er en transaksjon.</small>
                 </span>
               </label>
             </details>
@@ -267,7 +276,9 @@ export function ImportModal({
           <div className="previewTable">
             {preview.rows.slice(0, PREVIEW_LIMIT).map((row) => (
               <div
-                className={`previewRow ${row.error ? 'bad' : ''} ${row.duplicate ? 'dup' : ''}`}
+                className={`previewRow ${row.error ? 'bad' : ''} ${
+                  row.duplicate ? 'dup' : ''
+                } ${!row.ownership && !row.is_transfer ? 'unresolved' : ''}`}
                 key={row.row_number}
               >
                 <span>{row.posted_at}</span>
@@ -326,6 +337,7 @@ export function ImportModal({
                 previewRef.current = null;
                 rowEditsRef.current.clear();
                 setPreview(null);
+                setColumnsOpen(false);
                 setFile(null);
                 setError(null);
               }}

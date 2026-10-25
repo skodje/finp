@@ -24,6 +24,10 @@ DEFAULT_RULES = {
     "barnehage": Classification(Ownership.COMMON, Decimal("1.00"), "Barn"),
     "lilleprinsen": Classification(Ownership.COMMON, Decimal("1.00"), "Barn"),
     "unison fm": Classification(Ownership.PRIVATE, Decimal("1.00"), "Food"),
+    "netflix": Classification(Ownership.COMMON, Decimal("0.98"), "Streaming"),
+    "hbo": Classification(Ownership.COMMON, Decimal("0.98"), "Streaming"),
+    "prime": Classification(Ownership.COMMON, Decimal("0.95"), "Streaming"),
+    "medlemsavgift": Classification(Ownership.COMMON, Decimal("0.95"), "Annet"),
 }
 
 

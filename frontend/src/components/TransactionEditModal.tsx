@@ -9,6 +9,7 @@ type Props = {
   people: Person[];
   onClose: () => void;
   onSaved: (tx: Tx) => void;
+  onDeleted: (id: string) => void;
 };
 
 function equalShares(people: Person[]) {
@@ -40,7 +41,7 @@ function initialOwnership(tx: Tx) {
   return tx.ownership === 'split' ? 'common' : (tx.ownership ?? '');
 }
 
-export function TransactionEditModal({ tx, people, onClose, onSaved }: Props) {
+export function TransactionEditModal({ tx, people, onClose, onSaved, onDeleted }: Props) {
   const [date, setDate] = useState(tx.posted_at);
   const [description, setDescription] = useState(tx.description);
   const [amount, setAmount] = useState(tx.amount);
@@ -118,6 +119,20 @@ export function TransactionEditModal({ tx, people, onClose, onSaved }: Props) {
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update transaction');
+      setSaving(false);
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm('Slett denne transaksjonen? Dette kan ikke angres.')) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.deleteTransaction(tx.id);
+      onDeleted(tx.id);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete transaction');
       setSaving(false);
     }
   }
@@ -210,18 +225,22 @@ export function TransactionEditModal({ tx, people, onClose, onSaved }: Props) {
             )}
           </>
         )}
-        <label className="field">
+        <label className="checkField">
+          <input
+            type="checkbox"
+            checked={isTransfer}
+            onChange={(e) => setIsTransfer(e.target.checked)}
+          />
           <span>
-            <input
-              type="checkbox"
-              checked={isTransfer}
-              onChange={(e) => setIsTransfer(e.target.checked)}
-            />{' '}
-            Overføring (f.eks. kortregning) – teller ikke som utgift
+            <strong>Overføring</strong>
+            <small>F.eks. kortregning. Teller ikke som utgift.</small>
           </span>
         </label>
         {error && <div className="error">{error}</div>}
         <div className="modalActions">
+          <button type="button" className="danger" onClick={remove} disabled={saving}>
+            Slett transaksjon
+          </button>
           <button type="button" onClick={onClose} disabled={saving}>
             Avbryt
           </button>

@@ -69,6 +69,17 @@ def test_manual_transaction_create(client):
     assert client.post("/api/transactions", json=bad).status_code == 422
 
 
+def test_delete_transaction(client):
+    acc = _account(client)
+    _import(client, acc["id"])
+    tx = client.get("/api/transactions").json()[0]
+    url = f"/api/transactions/{tx['id']}"
+
+    assert client.delete(url).status_code == 204
+    assert all(row["id"] != tx["id"] for row in client.get("/api/transactions").json())
+    assert client.delete(url).status_code == 404
+
+
 def test_preview_flags_rows_already_stored(client):
     acc = _account(client)
     _import(client, acc["id"])

@@ -197,6 +197,9 @@ export function App() {
           people={people}
           onClose={() => setEditing(null)}
           onSaved={loadTransactions}
+          onDeleted={(id) =>
+            setTransactions((rows) => rows.filter((transaction) => transaction.id !== id))
+          }
         />
       )}
 

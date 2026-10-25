@@ -21,11 +21,13 @@ async function request<T>(
   return body as T;
 }
 
-const send = (method: string) => (body: unknown): RequestInit => ({
-  method,
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-});
+const send =
+  (method: string) =>
+  (body: unknown): RequestInit => ({
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 const post = send('POST');
 const patch = send('PATCH');
 
@@ -102,6 +104,9 @@ export const updateTransaction = (
     is_transfer: boolean;
   },
 ) => request<Tx>(`/transactions/${id}`, patch(data), 'Could not update transaction');
+
+export const deleteTransaction = (id: string) =>
+  request<void>(`/transactions/${id}`, { method: 'DELETE' }, 'Could not delete transaction');
 
 export const getSettlement = (month: string) =>
   request<Settlement>(`/settlement?month=${month}`, undefined, 'Could not load settlement');
